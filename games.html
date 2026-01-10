@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Games - Full Experience</title>
   <style>
-    /* --- Previous Styles Kept Intact --- */
+    /* --- Styles --- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #121212; color: white; overflow-x: hidden; }
     #particleCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
@@ -13,54 +13,36 @@
     .header { position: fixed; top: 0; left: 0; width: 100%; height: 60px; background: rgba(26,26,26,0.9); display: flex; align-items: center; padding: 0 20px; z-index: 1100; border-bottom: 1px solid #333; backdrop-filter: blur(5px); }
     .hamburger { width: 30px; height: 30px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-around; margin-right: 15px; }
     .hamburger span { width: 100%; height: 3px; background: white; border-radius: 2px; }
-    .user-info { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-    .avatar { width: 35px; height: 35px; border-radius: 50%; background: #4285f4; display: flex; align-items: center; justify-content: center; font-weight: bold; }
     
     .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100vh; background: #2c2c2c; transition: left 0.3s; z-index: 1200; display: flex; flex-direction: column; }
     .sidebar.open { left: 0; }
     .nav-item { padding: 15px 25px; cursor: pointer; border-bottom: 1px solid #3a3a3a; transition: 0.2s; color: white; }
     .nav-item:hover { background: #3a3a3a; }
     
-    .sidebar-bottom { margin-top: auto; border-top: 2px solid #444; }
-    .nav-item.logout { background: #ea4335; }
-    .nav-item.logout:hover { background: #d33828; }
-    
     .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 1150; }
     .overlay.active { opacity: 1; pointer-events: all; }
 
-    .search-container { margin: 90px auto 20px; max-width: 600px; padding: 0 20px; position: relative; z-index: 10; }
-    #gameSearch { width: 100%; padding: 12px 20px; background: rgba(44,44,44,0.8); border: 2px solid #444; border-radius: 4px; color: white; font-size: 16px; outline: none; }
-    
-    .pinned-section { padding: 20px; position: relative; z-index: 10; }
-    .pinned-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #ffd700; }
-    .pinned-games { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
-    
-    .game-container { padding: 20px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; position: relative; z-index: 10; }
-    .game-card { background: white; color: black; padding: 15px 30px; cursor: pointer; font-weight: bold; border-radius: 2px; min-width: 120px; text-align: center; position: relative; }
-    .game-card.pinned { background: linear-gradient(135deg, #ffd700, #ffed4e); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); }
-    
-    .pin-btn { position: absolute; top: 5px; right: 5px; background: #ffd700; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; font-size: 14px; display: none; }
-    .game-card:hover .pin-btn { display: block; }
-    .game-card.pinned .pin-btn { display: block; background: #ff4444; }
+    /* --- Options Overlay --- */
+    #optionsMenu { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 18, 0.98); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+    .options-content { background: #2c2c2c; padding: 30px; border-radius: 12px; border: 1px solid #444; width: 100%; max-width: 400px; }
+    .option-group { margin-bottom: 20px; }
+    .option-group label { display: block; margin-bottom: 8px; color: #4285f4; font-weight: bold; }
+    .option-input { width: 100%; padding: 10px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; }
+    .close-options { margin-top: 20px; padding: 10px 20px; background: #ea4335; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
+    /* --- Game Elements --- */
+    .game-container { padding: 90px 20px 20px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; position: relative; z-index: 10; }
+    .game-card { background: white; color: black; padding: 15px 30px; cursor: pointer; font-weight: bold; border-radius: 2px; min-width: 120px; text-align: center; }
+    
     #gameView { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: black; z-index: 1300; }
     #gameIframe { width: 100%; height: 100%; border: none; }
     .close-btn { position: absolute; top: 15px; right: 20px; background: #ea4335; color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; z-index: 1500; }
 
-    /* --- Enhanced Chat Widget --- */
-    #chatWidget { position: absolute; top: 80px; left: 20px; width: 350px; height: 500px; background: #2c2c2c; border: 1px solid #444; border-radius: 8px; z-index: 1400; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.8); overflow: visible; min-width: 200px; min-height: 45px; }
-    #chatHeader { padding: 12px; background: #4285f4; cursor: move; font-weight: bold; display: flex; justify-content: space-between; color: white; user-select: none; flex-shrink: 0; border-top-left-radius: 8px; border-top-right-radius: 8px; }
-    #chatIframe { flex: 1; border: none; background: white; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
-    .min-btn { cursor: pointer; background: rgba(0,0,0,0.2); border: none; color: white; padding: 0 10px; border-radius: 3px; }
-
-    /* Invisible Shim for smoother mouse tracking */
-    #chatShim { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1405; cursor: inherit; }
-    
-    /* Bigger Grab Handle for Resizing */
-    #chatResizer { width: 30px; height: 30px; background: transparent; position: absolute; right: -5px; bottom: -5px; cursor: nwse-resize; z-index: 1410; }
-    
-    /* Visual indicator for resizing corner (optional) */
-    #chatResizer::after { content: ''; position: absolute; right: 10px; bottom: 10px; width: 0; height: 0; border-style: solid; border-width: 0 0 10px 10px; border-color: transparent transparent rgba(255,255,255,0.3) transparent; pointer-events: none; }
+    /* --- Chat --- */
+    #chatWidget { position: absolute; top: 80px; left: 20px; width: 350px; height: 500px; background: #2c2c2c; border: 1px solid #444; border-radius: 8px; z-index: 1400; display: flex; flex-direction: column; overflow: visible; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+    #chatHeader { padding: 12px; background: #4285f4; cursor: move; border-top-left-radius: 8px; border-top-right-radius: 8px; }
+    #chatResizer { width: 30px; height: 30px; position: absolute; right: -5px; bottom: -5px; cursor: nwse-resize; z-index: 1410; }
+    #chatShim { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1405; }
   </style>
 </head>
 <body>
@@ -69,175 +51,138 @@
 
   <div class="header">
     <div class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></div>
-    <div class="user-info"><div class="avatar" id="gameUserAvatar">U</div><span id="gameUsername">User</span></div>
+    <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
+        <span id="gameUsername">User</span>
+    </div>
   </div>
 
   <div class="sidebar" id="sidebar">
     <div style="padding:20px; font-weight:bold; background:#1a1a1a;">Menu</div>
-    <div class="nav-item" onclick="window.location.href='index.html'">🏠 Home</div>
-    <div class="nav-item" onclick="window.location.href='chat.html'">💬 Chat</div>
-    <div class="nav-item" onclick="window.location.href='call.html'">📞 Call</div> <div class="nav-item" onclick="window.location.href='games.html'">🎮 Games</div>
-    <div class="sidebar-bottom">
-      <div class="nav-item" onclick="window.location.href='settings.html'">⚙️ Settings</div>
-      <div class="nav-item logout" onclick="handleLogout()">🚪 Logout</div>
-    </div>
+    <div class="nav-item" onclick="location.href='index.html'">🏠 Home</div>
+    <div class="nav-item" onclick="location.href='chat.html'">💬 Chat</div>
+    <div class="nav-item" onclick="location.href='call.html'">📞 Call</div>
+    <div class="nav-item" onclick="toggleOptions()">⚙️ Options</div> <div class="nav-item logout" style="margin-top:auto;" onclick="handleLogout()">🚪 Logout</div>
   </div>
   <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
-  <div class="search-container">
-    <input type="text" id="gameSearch" placeholder="Search games..." onkeyup="filterGames()">
+  <div id="optionsMenu">
+    <div class="options-content">
+        <h2>Settings & Panic</h2>
+        <hr style="margin: 15px 0; border: 0; border-top: 1px solid #444;">
+        
+        <div class="option-group">
+            <label>Panic Keybind (Type a key)</label>
+            <input type="text" id="panicKeyInput" class="option-input" placeholder="Example: ] or Escape" maxlength="10">
+        </div>
+
+        <div class="option-group">
+            <label>Panic Redirect URL</label>
+            <input type="text" id="panicUrlInput" class="option-input" placeholder="https://google.com">
+        </div>
+
+        <button class="close-options" onclick="saveOptions()">Save & Close</button>
+    </div>
   </div>
-  <div id="pinnedSection" class="pinned-section" style="display: none;"><div class="pinned-title">📌 Pinned Games</div><div class="pinned-games" id="pinnedGrid"></div></div>
+
   <div class="game-container" id="gameGrid"></div>
 
   <div id="gameView">
     <button class="close-btn" onclick="closeGame()">✕ Exit Game</button>
-    
     <div id="chatWidget">
-        <div id="chatHeader">
-          <span>💬 Game Chat</span>
-          <button class="min-btn" onclick="toggleChat()">_</button>
-        </div>
-        <iframe id="chatIframe" src="chat.html"></iframe>
+        <div id="chatHeader">💬 Game Chat <button onclick="toggleChat()" style="float:right">_</button></div>
+        <iframe id="chatIframe" src="chat.html" style="flex:1; border:none; background:white;"></iframe>
         <div id="chatShim"></div>
         <div id="chatResizer"></div>
     </div>
-
     <iframe id="gameIframe" src=""></iframe>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getDatabase, ref, get, child, set, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+  <script>
+    /* --- Panic Button Logic --- */
+    let panicKey = localStorage.getItem('panicKey') || '`'; 
+    let panicUrl = localStorage.getItem('panicUrl') || 'https://www.classroom.google.com';
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
-      authDomain: "chat-or-somethig.firebaseapp.com",
-      databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
-      projectId: "chat-or-somethig",
-      storageBucket: "chat-or-somethig.firebasestorage.app",
-      messagingSenderId: "598777875087",
-      appId: "1:598777875087:web:d100536dd269bc0a9d7efa"
-    };
+    // Initialize inputs in the menu
+    document.getElementById('panicKeyInput').value = panicKey;
+    document.getElementById('panicUrlInput').value = panicUrl;
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const database = getDatabase(app);
-    const dbRef = ref(database);
-
-    window.isAdmin = false;
-    window.pinnedGames = [];
-
-    onAuthStateChanged(auth, async user => {
-      if (user) {
-        const snap = await get(child(dbRef, `users/${user.uid}`));
-        if (snap.exists()) {
-          const data = snap.val();
-          window.isAdmin = data.isAdmin === true;
-          document.getElementById("gameUsername").textContent = data.username;
-          document.getElementById("gameUserAvatar").textContent = data.username[0].toUpperCase();
+    window.addEventListener('keydown', (e) => {
+        // If the user presses the panic key anywhere on the site
+        if (e.key === panicKey) {
+            window.location.href = panicUrl;
         }
-        onValue(ref(database, 'pinnedGames'), (s) => { window.pinnedGames = s.val() || []; renderGames(window.allGames); });
-      } else { window.location.href = 'index.html'; }
     });
 
-    window.handleLogout = () => { if (confirm('Logout?')) signOut(auth).then(() => window.location.href = 'index.html'); };
-  </script>
+    function toggleOptions() {
+        const menu = document.getElementById('optionsMenu');
+        menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+        toggleSidebar(); // Close sidebar when opening options
+    }
 
-  <script>
-    /* --- Logic --- */
+    function saveOptions() {
+        panicKey = document.getElementById('panicKeyInput').value;
+        panicUrl = document.getElementById('panicUrlInput').value;
+        
+        localStorage.setItem('panicKey', panicKey);
+        localStorage.setItem('panicUrl', panicUrl);
+        
+        document.getElementById('optionsMenu').style.display = 'none';
+        alert('Settings Saved! Press "' + panicKey + '" to panic.');
+    }
+
+    /* --- Sidebar & Game Logic --- */
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('overlay').classList.toggle('active');
+    }
+
     window.allGames = [];
     async function loadGames() {
-      try { const r = await fetch('games.json'); window.allGames = await r.json(); renderGames(window.allGames); } catch(e){}
+        try {
+            const r = await fetch('games.json');
+            window.allGames = await r.json();
+            const grid = document.getElementById('gameGrid');
+            window.allGames.forEach(game => {
+                const btn = document.createElement('div');
+                btn.className = 'game-card';
+                btn.innerText = game.label;
+                btn.onclick = () => {
+                    document.getElementById('gameIframe').src = game.path;
+                    document.getElementById('gameView').style.display = 'block';
+                };
+                grid.appendChild(btn);
+            });
+        } catch(e) {}
     }
 
-    function createGameCard(game, container, isPinned) {
-      const btn = document.createElement('div');
-      btn.className = 'game-card' + (isPinned ? ' pinned' : '');
-      btn.innerText = game.label.toLowerCase().startsWith('cl') ? game.label.slice(2) : game.label;
-      btn.onclick = () => {
-        document.getElementById('gameIframe').src = game.path;
-        document.getElementById('gameView').style.display = 'block';
-        document.body.style.overflow = 'hidden';
-      };
-      container.appendChild(btn);
+    function closeGame() {
+        document.getElementById('gameIframe').src = '';
+        document.getElementById('gameView').style.display = 'none';
     }
 
-    function renderGames(list) {
-      const g = document.getElementById('gameGrid'), pg = document.getElementById('pinnedGrid'), ps = document.getElementById('pinnedSection');
-      g.innerHTML = ''; pg.innerHTML = '';
-      const pinned = list.filter(x => window.pinnedGames.includes(x.label));
-      ps.style.display = pinned.length ? 'block' : 'none';
-      pinned.forEach(x => createGameCard(x, pg, true));
-      list.filter(x => !window.pinnedGames.includes(x.label)).forEach(x => createGameCard(x, g, false));
-    }
-
-    window.closeGame = () => { document.getElementById('gameIframe').src = ''; document.getElementById('gameView').style.display = 'none'; document.body.style.overflow = 'auto'; };
-    window.toggleSidebar = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); };
-
-    /* --- Enhanced Drag & Resize Logic --- */
+    /* --- Draggable/Resizable Chat (Hitbox Expanded) --- */
     const widget = document.getElementById("chatWidget");
-    const header = document.getElementById("chatHeader");
     const resizer = document.getElementById("chatResizer");
     const shim = document.getElementById("chatShim");
 
-    window.toggleChat = () => {
-      const frame = document.getElementById("chatIframe");
-      const isHidden = frame.style.display === "none";
-      frame.style.display = isHidden ? "block" : "none";
-      widget.style.height = isHidden ? "500px" : "45px";
-    };
-
-    // Dragging Logic
-    header.onmousedown = (e) => {
-        if (e.target.closest('.min-btn')) return;
-        shim.style.display = "block";
-        let offX = e.clientX - widget.offsetLeft, offY = e.clientY - widget.offsetTop;
-        const move = (me) => { widget.style.left = (me.clientX - offX) + "px"; widget.style.top = (me.clientY - offY) + "px"; };
-        const stop = () => { shim.style.display = "none"; document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', stop); };
-        document.addEventListener('mousemove', move);
-        document.addEventListener('mouseup', stop);
-    };
-
-    // Resize Logic with Hitbox Expansion
     resizer.onmousedown = (e) => {
         shim.style.display = "block";
-        // Expand the resizer area temporarily so the mouse never escapes while shrinking
-        resizer.style.width = "500px";
-        resizer.style.height = "500px";
-        resizer.style.right = "-250px";
-        resizer.style.bottom = "-250px";
-
+        resizer.style.width = "500px"; resizer.style.height = "500px"; // Expand hitbox
         let startW = widget.offsetWidth, startH = widget.offsetHeight, startX = e.clientX, startY = e.clientY;
         const move = (me) => {
-            const nw = startW + (me.clientX - startX), nh = startH + (me.clientY - startY);
-            if (nw > 200) widget.style.width = nw + "px";
-            if (nh > 45) widget.style.height = nh + "px";
+            widget.style.width = (startW + (me.clientX - startX)) + "px";
+            widget.style.height = (startH + (me.clientY - startY)) + "px";
         };
         const stop = () => {
             shim.style.display = "none";
             resizer.style.width = "30px"; resizer.style.height = "30px";
-            resizer.style.right = "-5px"; resizer.style.bottom = "-5px";
             document.removeEventListener('mousemove', move);
-            document.removeEventListener('mouseup', stop);
         };
         document.addEventListener('mousemove', move);
-        document.addEventListener('mouseup', stop);
+        document.addEventListener('mouseup', stop, {once:true});
     };
 
-    /* --- Particles --- */
-    const cvs = document.getElementById('particleCanvas'), ctx = cvs.getContext('2d');
-    let pts = [];
-    function rs() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
-    class P {
-      constructor() { this.x = Math.random()*cvs.width; this.y = Math.random()*cvs.height; this.v = (Math.random()-0.5)*0.5; }
-      u() { this.x+=this.v; this.y+=this.v; if(this.x<0||this.x>cvs.width)this.v*=-1; }
-    }
-    function anim() { ctx.clearRect(0,0,cvs.width,cvs.height); pts.forEach(p=>{p.u(); ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.arc(p.x,p.y,2,0,Math.PI*2); ctx.fill();}); requestAnimationFrame(anim); }
-    window.onresize = rs; rs();
-    for(let i=0; i<50; i++) pts.push(new P());
-    anim(); loadGames();
+    loadGames();
   </script>
 </body>
 </html>
