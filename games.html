@@ -8,7 +8,7 @@
     /* --- Previous Styles --- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #121212; color: white; overflow-x: hidden; }
-    #particleCanvas { position: fixed; top: 0; left: 0; z-index: -1; pointer-events: none; }
+    #particleCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
     
     .header { position: fixed; top: 0; left: 0; width: 100%; height: 60px; background: rgba(26,26,26,0.9); display: flex; align-items: center; padding: 0 20px; z-index: 1100; border-bottom: 1px solid #333; backdrop-filter: blur(5px); }
     .hamburger { width: 30px; height: 30px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-around; margin-right: 15px; }
@@ -95,6 +95,65 @@
     <iframe id="gameIframe" src=""></iframe>
   </div>
 
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
+      authDomain: "chat-or-somethig.firebaseapp.com",
+      databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
+      projectId: "chat-or-somethig",
+      storageBucket: "chat-or-somethig.firebasestorage.app",
+      messagingSenderId: "598777875087",
+      appId: "1:598777875087:web:d100536dd269bc0a9d7efa"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const database = getDatabase(app);
+    const dbRef = ref(database);
+
+    // Load user info from Firebase
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        const snap = await get(child(dbRef, `users/${user.uid}`));
+        if (snap.exists()) {
+          const data = snap.val();
+          document.getElementById("gameUsername").textContent = data.username;
+          document.getElementById("gameUserAvatar").textContent = data.username[0].toUpperCase();
+        } else {
+          // Fallback to email if no username in database
+          const username = user.email.split('@')[0];
+          document.getElementById("gameUsername").textContent = username;
+          document.getElementById("gameUserAvatar").textContent = username[0].toUpperCase();
+        }
+      } else {
+        // Not logged in, redirect to home
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Logout function with Firebase
+    window.handleLogout = () => {
+      const sidebar = document.getElementById("sidebar");
+      if (confirm('Are you sure you want to logout?')) {
+        signOut(auth).then(() => {
+          // Close sidebar if open
+          if (sidebar.classList.contains("open")) {
+            toggleSidebar();
+          }
+          // Redirect to home/login page
+          window.location.href = 'index.html';
+        }).catch((error) => {
+          console.error('Logout error:', error);
+          alert('Error logging out. Please try again.');
+        });
+      }
+    };
+  </script>
+
   <script>
     /* --- Game Loading & Sidebar Logic --- */
     let allGames = [];
@@ -140,16 +199,6 @@
       document.getElementById('overlay').classList.toggle('active');
     }
 
-    function handleLogout() {
-      if (confirm('Are you sure you want to logout?')) {
-        // Clear any stored user data
-        localStorage.clear();
-        sessionStorage.clear();
-        // Redirect to login page
-        window.location.href = 'index.html';
-      }
-    }
-
     /* --- Floating Chat Widget Logic --- */
     const widget = document.getElementById("chatWidget");
     const header = document.getElementById("chatHeader");
@@ -165,6 +214,145 @@
     let activeAction = null; 
     let startX, startY, startW, startH, startL, startT;
 
+    /* --- Particle Background & Interaction Logic --- */
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Mouse interaction object
+    let mouse = {
+        x: null,
+        y: null,
+        radius: 120
+    };
+
+    // Track Mouse Position
+    window.addEventListener('mousemove', (event) => {
+        mouse.x = event.x;
+        mouse.y = event.y;
+    });
+
+    // Track Touch Position (Mobile)
+    window.addEventListener('touchmove', (event) => {
+        mouse.x = event.touches[0].clientX;
+        mouse.y = event.touches[0].clientY;
+    });
+
+    // Reset interaction when mouse leaves window
+    window.addEventListener('mouseout', () => {
+        mouse.x = undefined;
+        mouse.y = undefined;
+    });
+
+    // Haptic Feedback Helper
+    let lastVibrate = 0;
+    function triggerHaptic() {
+        if (!navigator.vibrate) return;
+        const now = Date.now();
+        if (now - lastVibrate > 50) {
+            navigator.vibrate(5);
+            lastVibrate = now;
+        }
+    }
+
+    let particles = [];
+    
+    function resize() { 
+      canvas.width = window.innerWidth; 
+      canvas.height = window.innerHeight; 
+    }
+    
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width; 
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.5; 
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.size = Math.random() * 2 + 1;
+        this.baseX = this.x;
+        this.baseY = this.y;
+        this.density = (Math.random() * 30) + 1; 
+      }
+
+      update() {
+        // Basic Movement
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Mouse Interaction & Haptics
+        if (mouse.x != undefined && mouse.y != undefined) {
+            let dx = mouse.x - this.x;
+            let dy = mouse.y - this.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < mouse.radius) {
+                if (distance < mouse.radius - 20) {
+                    triggerHaptic();
+                }
+
+                const forceDirectionX = dx / distance;
+                const forceDirectionY = dy / distance;
+                const maxDistance = mouse.radius;
+                const force = (maxDistance - distance) / maxDistance;
+                
+                const directionX = forceDirectionX * force * this.density;
+                const directionY = forceDirectionY * force * this.density;
+
+                this.x -= directionX;
+                this.y -= directionY;
+            }
+        }
+
+        // Screen Edge Bouncing
+        if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+        if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+      }
+    }
+
+    function init() { 
+      resize(); 
+      particles = Array.from({length: 100}, () => new Particle()); 
+    }
+    
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const color = '255, 255, 255'; // White particles for dark theme
+      
+      particles.forEach((p, i) => {
+        p.update();
+        
+        // Draw particle
+        ctx.fillStyle = `rgba(${color}, 0.7)`; 
+        ctx.beginPath(); 
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); 
+        ctx.fill();
+
+        // Draw connecting lines
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = p.x - particles[j].x;
+          const dy = p.y - particles[j].y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 120) {
+            ctx.strokeStyle = `rgba(${color}, ${(1 - dist/120) * 0.5})`; 
+            ctx.lineWidth = 1;
+            ctx.beginPath(); 
+            ctx.moveTo(p.x, p.y); 
+            ctx.lineTo(particles[j].x, particles[j].y); 
+            ctx.stroke();
+          }
+        }
+      });
+      requestAnimationFrame(animate);
+    }
+    
+    window.addEventListener('resize', () => {
+      resize();
+      init();
+    });
+    
+    // Initialize particles and start animation
+    init(); 
+    animate();
+    
     // Load games on page load
     loadGames();
   </script>
