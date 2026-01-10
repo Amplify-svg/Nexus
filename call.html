@@ -25,13 +25,15 @@
     #acceptBtn { background: #31a24c; }
     #hangupBtn { background: #fa3e3e; }
     #callStatus { position: absolute; top: 40px; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 20px; font-weight: bold; z-index: 2002; }
+
+    #debugLog { position: fixed; bottom: 10px; left: 10px; font-size: 10px; color: #555; pointer-events: none; }
   </style>
 </head>
 <body>
 
   <div class="header">
     <div class="status-dot"></div>
-    <span id="uName">Loading...</span>
+    <span id="uName">Connecting to Firebase...</span>
   </div>
 
   <div id="memberList">
@@ -52,6 +54,8 @@
       <button id="hangupBtn" class="btn-action" onclick="hangUp()">🚫</button>
     </div>
   </div>
+
+  <div id="debugLog">System Ready</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
@@ -83,11 +87,17 @@
       ]
     };
 
+    function log(msg) {
+        console.log(msg);
+        document.getElementById('debugLog').innerText = msg;
+    }
+
     onAuthStateChanged(auth, (user) => {
       if (!user) { window.location.href = 'index.html'; return; }
       currentUser = user;
       currentUsername = user.email.split('@')[0];
       document.getElementById("uName").textContent = currentUsername;
+      log("Logged in as: " + currentUsername);
 
       const myPresenceRef = ref(database, `online/${user.uid}`);
       set(myPresenceRef, { name: currentUsername, uid: user.uid });
@@ -103,8 +113,8 @@
         document.getElementById("localVideo").srcObject = localStream;
         return true;
       } catch (e) {
-        console.error("Media Error:", e);
-        alert("Camera/Mic access denied.");
+        log("Media Error: " + e.message);
+        alert("Camera/Mic access denied or not on HTTPS.");
         return false;
       }
     }
@@ -122,12 +132,14 @@
       localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
       pc.ontrack = (event) => {
+        log("Received remote video stream");
         document.getElementById("remoteVideo").srcObject = event.streams[0];
         document.getElementById("callStatus").textContent = "Connected";
       };
 
       pc.onicecandidate = (event) => {
         if (event.candidate) {
+          log("Sending ICE candidate to receiver");
           push(ref(database, `calls/${uid}/candidates`), event.candidate.toJSON());
         }
       };
@@ -136,21 +148,26 @@
       await pc.setLocalDescription(offer);
 
       const callRef = ref(database, `calls/${uid}`);
+      log("Setting offer in Firebase...");
       set(callRef, {
         offer: { type: offer.type, sdp: offer.sdp },
         from: currentUser.uid,
         name: currentUsername
-      });
+      }).catch(err => log("Firebase Set Error: " + err.message));
 
       onValue(callRef, async (snap) => {
         const data = snap.val();
         if (data?.answer && pc.signalingState === "have-local-offer") {
+          log("Answer received, setting remote description");
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
       });
 
       onChildAdded(ref(database, `calls/${uid}/remoteCandidates`), (snap) => {
-        if (pc && snap.val()) pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {});
+        if (pc && snap.val()) {
+            log("Adding candidate from receiver");
+            pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {});
+        }
       });
     };
 
@@ -161,10 +178,12 @@
         if (data && data.offer && !pc) {
           window.incomingCall = data;
           document.getElementById("callOverlay").style.display = "flex";
-          document.getElementById("callStatus").textContent = "Call from: " + data.name;
+          document.getElementById("callStatus").textContent = "Incoming Call: " + data.name;
           document.getElementById("acceptBtn").style.display = "flex";
+          log("Call detected from " + data.name);
         } else if (!data && pc) {
-          hangUp(); // Remote side ended call
+          log("Call ended by remote party");
+          hangUp(); 
         }
       });
     }
@@ -189,14 +208,19 @@
 
       pc.onicecandidate = (event) => {
         if (event.candidate) {
+          log("Sending candidate back to caller");
           push(ref(database, `calls/${targetId}/remoteCandidates`), event.candidate.toJSON());
         }
       };
 
       onChildAdded(ref(database, `calls/${currentUser.uid}/candidates`), (snap) => {
-        if (pc && snap.val()) pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {});
+        if (pc && snap.val()) {
+            log("Adding candidate from caller");
+            pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {});
+        }
       });
 
+      log("Answering call, setting remote offer");
       await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
@@ -207,6 +231,7 @@
     };
 
     window.hangUp = () => {
+      log("Hanging up call");
       if (localStream) localStream.getTracks().forEach(t => t.stop());
       if (pc) { pc.close(); pc = null; }
       
