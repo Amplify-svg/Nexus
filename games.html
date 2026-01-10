@@ -203,6 +203,8 @@
   <script>
     /* --- Game Loading & Sidebar Logic --- */
     let allGames = [];
+    let pinnedGames = []; // Initialize here in main script scope
+    
     async function loadGames() {
       try {
         const response = await fetch('games.json');
