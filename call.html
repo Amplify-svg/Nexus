@@ -8,28 +8,23 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; overflow: hidden; }
     
-    /* --- HEADER --- */
     .header { position: fixed; top: 0; width: 100%; height: 60px; background: #1f1f1f; display: flex; align-items: center; padding: 0 20px; z-index: 100; border-bottom: 1px solid #333; }
-    .status-dot { width: 10px; height: 10px; background: #31a24c; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .status-dot { width: 10px; height: 10px; background: #31a24c; border-radius: 50%; display: inline-block; margin-right: 8px; }
 
-    /* --- ONLINE LIST --- */
     #memberList { position: fixed; left: 50%; top: 100px; transform: translateX(-50%); width: 90%; max-width: 400px; background: #1f1f1f; border-radius: 12px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333; }
-    .user-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; margin-bottom: 10px; background: #2b2b2b; border-radius: 8px; transition: 0.2s; }
-    .user-item:hover { background: #353535; }
+    .user-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; margin-bottom: 10px; background: #2b2b2b; border-radius: 8px; }
     .call-btn { background: #0084ff; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-    .call-btn:hover { background: #0073e6; }
-
-    /* --- CALL OVERLAY --- */
+    
     #callOverlay { display: none; position: fixed; inset: 0; background: #000; z-index: 2000; flex-direction: column; align-items: center; justify-content: center; }
     .video-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
     #remoteVideo { width: 100%; height: 100%; object-fit: cover; background: #111; }
-    #localVideo { position: absolute; width: 200px; height: 150px; bottom: 100px; right: 20px; border: 2px solid #0084ff; border-radius: 10px; object-fit: cover; transform: scaleX(-1); background: #222; }
+    #localVideo { position: absolute; width: 180px; height: 135px; bottom: 100px; right: 20px; border: 2px solid #0084ff; border-radius: 10px; object-fit: cover; transform: scaleX(-1); background: #222; }
     
     .call-ui { position: absolute; bottom: 30px; display: flex; gap: 20px; z-index: 2001; }
     .btn-action { width: 65px; height: 65px; border-radius: 50%; border: none; cursor: pointer; font-size: 24px; display: flex; align-items: center; justify-content: center; color: white; }
     #acceptBtn { background: #31a24c; }
     #hangupBtn { background: #fa3e3e; }
-    #callStatus { position: absolute; top: 40px; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 20px; font-weight: bold; }
+    #callStatus { position: absolute; top: 40px; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 20px; font-weight: bold; z-index: 2002; }
   </style>
 </head>
 <body>
@@ -40,14 +35,14 @@
   </div>
 
   <div id="memberList">
-    <h3 style="margin-bottom: 15px; text-align: center;">Ready to Call</h3>
+    <h3 style="margin-bottom: 15px; text-align: center;">Online Users</h3>
     <div id="onlineUsers">
-      <p style="color: #888; text-align: center;">Looking for users...</p>
+      <p style="color: #888; text-align: center;">Waiting for others to join...</p>
     </div>
   </div>
 
   <div id="callOverlay">
-    <div id="callStatus">Calling...</div>
+    <div id="callStatus">Establishing Connection...</div>
     <div class="video-container">
       <video id="remoteVideo" autoplay playsinline></video>
       <video id="localVideo" autoplay playsinline muted></video>
@@ -81,140 +76,168 @@
     let localStream = null, pc = null;
     let targetId = null;
 
-    const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+    const servers = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" }
+      ]
+    };
 
     onAuthStateChanged(auth, (user) => {
       if (!user) { window.location.href = 'index.html'; return; }
       currentUser = user;
       currentUsername = user.email.split('@')[0];
-      document.getElementById("uName").textContent = currentUsername + " (You)";
+      document.getElementById("uName").textContent = currentUsername;
 
-      // Mark Online and Setup Disconnect
       const myPresenceRef = ref(database, `online/${user.uid}`);
       set(myPresenceRef, { name: currentUsername, uid: user.uid });
       onDisconnect(myPresenceRef).remove();
 
-      listenForCalls();
+      listenForIncomingCalls();
       listenForOnlineUsers();
     });
 
-    // --- VIDEO ENGINE ---
     async function startMedia() {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         document.getElementById("localVideo").srcObject = localStream;
-      } catch (e) { alert("Please allow camera access!"); }
+        return true;
+      } catch (e) {
+        console.error("Media Error:", e);
+        alert("Camera/Mic access denied.");
+        return false;
+      }
     }
 
-    function setupPeerConnection(targetUid) {
-      pc = new RTCPeerConnection(servers);
-      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-      
-      pc.ontrack = (e) => {
-        document.getElementById("remoteVideo").srcObject = e.streams[0];
-      };
-
-      pc.onicecandidate = (e) => {
-        if(e.candidate) {
-          push(ref(database, `calls/${targetUid}/candidates`), e.candidate.toJSON());
-        }
-      };
-    }
-
-    // --- CALL LOGIC ---
+    // --- CALLER SIDE ---
     window.startCall = async (uid) => {
       targetId = uid;
       document.getElementById("callOverlay").style.display = "flex";
       document.getElementById("acceptBtn").style.display = "none";
-      await startMedia();
-      setupPeerConnection(uid);
+      document.getElementById("callStatus").textContent = "Calling...";
+
+      if (!(await startMedia())) return;
+
+      pc = new RTCPeerConnection(servers);
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+      pc.ontrack = (event) => {
+        document.getElementById("remoteVideo").srcObject = event.streams[0];
+        document.getElementById("callStatus").textContent = "Connected";
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          push(ref(database, `calls/${uid}/candidates`), event.candidate.toJSON());
+        }
+      };
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
       const callRef = ref(database, `calls/${uid}`);
-      set(callRef, { 
-        offer: { type: offer.type, sdp: offer.sdp }, 
-        from: currentUser.uid, 
-        name: currentUsername 
+      set(callRef, {
+        offer: { type: offer.type, sdp: offer.sdp },
+        from: currentUser.uid,
+        name: currentUsername
       });
 
-      // Listen for Answer
       onValue(callRef, async (snap) => {
         const data = snap.val();
         if (data?.answer && pc.signalingState === "have-local-offer") {
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-          document.getElementById("callStatus").textContent = "Connected";
         }
+      });
+
+      onChildAdded(ref(database, `calls/${uid}/remoteCandidates`), (snap) => {
+        if (pc && snap.val()) pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {});
       });
     };
 
-    function listenForCalls() {
+    // --- RECEIVER SIDE ---
+    function listenForIncomingCalls() {
       onValue(ref(database, `calls/${currentUser.uid}`), (snap) => {
         const data = snap.val();
         if (data && data.offer && !pc) {
           window.incomingCall = data;
           document.getElementById("callOverlay").style.display = "flex";
-          document.getElementById("callStatus").textContent = "Calling: " + data.name;
+          document.getElementById("callStatus").textContent = "Call from: " + data.name;
           document.getElementById("acceptBtn").style.display = "flex";
         } else if (!data && pc) {
-          // If caller cancels
-          hangUp();
+          hangUp(); // Remote side ended call
         }
       });
     }
 
     window.answerCall = async () => {
-      await startMedia();
+      if (!window.incomingCall) return;
+      document.getElementById("acceptBtn").style.display = "none";
+      document.getElementById("callStatus").textContent = "Connecting...";
+
+      if (!(await startMedia())) return;
+
       const callData = window.incomingCall;
-      setupPeerConnection(callData.from);
+      targetId = callData.from;
+
+      pc = new RTCPeerConnection(servers);
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+      pc.ontrack = (event) => {
+        document.getElementById("remoteVideo").srcObject = event.streams[0];
+        document.getElementById("callStatus").textContent = "Connected";
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          push(ref(database, `calls/${targetId}/remoteCandidates`), event.candidate.toJSON());
+        }
+      };
+
+      onChildAdded(ref(database, `calls/${currentUser.uid}/candidates`), (snap) => {
+        if (pc && snap.val()) pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(e => {});
+      });
 
       await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      update(ref(database, `calls/${currentUser.uid}`), { 
-        answer: { type: answer.type, sdp: answer.sdp } 
+      update(ref(database, `calls/${currentUser.uid}`), {
+        answer: { type: answer.type, sdp: answer.sdp }
       });
-
-      onChildAdded(ref(database, `calls/${currentUser.uid}/candidates`), (s) => {
-        if(pc && s.val()) pc.addIceCandidate(new RTCIceCandidate(s.val())).catch(()=>{});
-      });
-
-      document.getElementById("callStatus").textContent = "Connected";
-      document.getElementById("acceptBtn").style.display = "none";
     };
 
     window.hangUp = () => {
-      if(localStream) localStream.getTracks().forEach(t => t.stop());
-      if(pc) { pc.close(); pc = null; }
+      if (localStream) localStream.getTracks().forEach(t => t.stop());
+      if (pc) { pc.close(); pc = null; }
+      
       remove(ref(database, `calls/${currentUser.uid}`));
-      if(targetId) remove(ref(database, `calls/${targetId}`));
+      if (targetId) remove(ref(database, `calls/${targetId}`));
+      
       document.getElementById("callOverlay").style.display = "none";
       document.getElementById("remoteVideo").srcObject = null;
+      window.incomingCall = null;
       targetId = null;
     };
 
-    // --- ONLINE LIST ---
     function listenForOnlineUsers() {
       onValue(ref(database, 'online'), (snap) => {
         const users = snap.val() || {};
         const container = document.getElementById("onlineUsers");
         container.innerHTML = "";
         
-        const otherUsers = Object.keys(users).filter(uid => uid !== currentUser.uid);
+        const others = Object.keys(users).filter(uid => uid !== currentUser.uid);
 
-        if(otherUsers.length === 0) {
-          container.innerHTML = `<p style="color:#888; text-align:center;">No one else is online right now.</p>`;
+        if (others.length === 0) {
+          container.innerHTML = `<p style="color:#888; text-align:center;">No one else is online.</p>`;
           return;
         }
 
-        otherUsers.forEach(uid => {
+        others.forEach(uid => {
           const div = document.createElement("div");
           div.className = "user-item";
           div.innerHTML = `
             <span>${users[uid].name}</span>
-            <button class="call-btn" onclick="startCall('${uid}')">📞 Video Call</button>
+            <button class="call-btn" onclick="startCall('${uid}')">📞 Call</button>
           `;
           container.appendChild(div);
         });
