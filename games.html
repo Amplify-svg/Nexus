@@ -97,7 +97,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const database = getDatabase(app);
-    let isAdmin = false; // The core value you requested
+    let isAdmin = (isAdmin === true); // The core value you requested
 
     // --- Auth Logic ---
     onAuthStateChanged(auth, async user => {
