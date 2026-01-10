@@ -97,7 +97,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const database = getDatabase(app);
-    let isAdmin = (isAdmin === true); // The core value you requested
+    let isAdmin = false; // The core value you requested
 
     // --- Auth Logic ---
     onAuthStateChanged(auth, async user => {
@@ -110,7 +110,7 @@
           document.getElementById("headerAvatar").textContent = data.username[0].toUpperCase();
           
           // Set isAdmin based on database role
-          isAdmin = (data.role === 'admin');
+          isAdmin = (data.isAdmin === true);
           if (isAdmin) document.body.classList.add('admin-mode');
         }
         loadGamesAndPins();
