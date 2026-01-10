@@ -3,51 +3,67 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Games - Admin Control</title>
+  <title>Games - Full Experience</title>
   <style>
-    /* ... (Previous styles for header, sidebar, and particles remain the same) ... */
+    /* --- Base Layout --- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #121212; color: white; overflow-x: hidden; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; overflow-x: hidden; }
     #particleCanvas { position: fixed; top: 0; left: 0; z-index: -1; pointer-events: none; }
     
-    .header { position: fixed; top: 0; left: 0; width: 100%; height: 60px; background: rgba(26,26,26,0.9); display: flex; align-items: center; padding: 0 20px; z-index: 1100; border-bottom: 1px solid #333; backdrop-filter: blur(5px); }
+    /* --- Header --- */
+    .header { position: fixed; top: 0; left: 0; width: 100%; height: 60px; background: rgba(26,26,26,0.95); display: flex; align-items: center; padding: 0 20px; z-index: 1100; border-bottom: 1px solid #333; backdrop-filter: blur(10px); }
     .hamburger { width: 30px; height: 30px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-around; margin-right: 15px; }
     .hamburger span { width: 100%; height: 3px; background: white; border-radius: 2px; }
     .user-info { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-    .avatar { width: 35px; height: 35px; border-radius: 50%; background: #4285f4; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .avatar { width: 35px; height: 35px; border-radius: 50%; background: #4285f4; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; }
     
-    .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100vh; background: #2c2c2c; transition: left 0.3s; z-index: 1200; display: flex; flex-direction: column; }
+    /* --- Sidebar with Bottom Alignment --- */
+    .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100vh; background: #1e1e1e; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1200; display: flex; flex-direction: column; border-right: 1px solid #333; }
     .sidebar.open { left: 0; }
-    .nav-item { padding: 15px 25px; cursor: pointer; border-bottom: 1px solid #3a3a3a; transition: 0.2s; color: white; text-decoration: none; display: block; }
-    .nav-item:hover { background: #3a3a3a; }
+    .sidebar-header { padding: 25px 20px; font-weight: bold; background: #1a1a1a; font-size: 1.3rem; border-bottom: 1px solid #333; }
     
-    .sidebar-footer { padding: 15px; border-top: 1px solid #3a3a3a; background: #1a1a1a; }
-    .footer-btn { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; color: white; font-weight: bold; }
+    .nav-items { flex: 1; overflow-y: auto; padding: 10px 0; }
+    .nav-item { padding: 15px 25px; cursor: pointer; transition: 0.2s; color: #ccc; text-decoration: none; display: block; font-size: 1.05rem; }
+    .nav-item:hover { background: #2c2c2c; color: white; }
+    
+    .sidebar-footer { padding: 15px; border-top: 1px solid #333; background: #1a1a1a; margin-top: auto; }
+    .footer-btn { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; transition: opacity 0.2s; }
+    .footer-btn:hover { opacity: 0.9; }
+    .settings-btn { background: #444; }
     .logout-btn { background: #ea4335; }
 
     .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 1150; }
     .overlay.active { opacity: 1; pointer-events: all; }
 
-    /* Game Cards */
-    .game-container { padding: 20px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-top: 80px; }
+    /* --- Game Cards --- */
+    .game-container { padding: 40px 20px; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 60px; position: relative; z-index: 10; }
     .game-card { 
-      background: white; color: black; padding: 20px; border-radius: 8px; 
-      min-width: 180px; text-align: center; position: relative; 
-      display: flex; flex-direction: column; gap: 10px; transition: 0.3s;
+      background: #ffffff; color: #121212; padding: 20px; border-radius: 12px; 
+      width: 220px; text-align: center; position: relative; 
+      display: flex; flex-direction: column; gap: 12px; transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
+    .game-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.5); }
     .game-card.pinned { border: 4px solid #f4b400; order: -1; }
-    .pin-tag { position: absolute; top: -10px; left: 10px; background: #f4b400; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; display: none; }
+    .pin-tag { position: absolute; top: -12px; left: 15px; background: #f4b400; color: #000; padding: 2px 10px; border-radius: 4px; font-size: 11px; font-weight: 800; display: none; }
     .game-card.pinned .pin-tag { display: block; }
 
-    .play-btn { background: #34a853; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    .admin-pin-btn { background: #4285f4; color: white; border: none; padding: 5px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+    .play-btn { background: #34a853; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+    .admin-pin-btn { background: #4285f4; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 11px; }
 
+    /* --- Game View & Floating Chat --- */
     #gameView { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: black; z-index: 1300; }
     #gameIframe { width: 100%; height: 100%; border: none; }
-    .close-btn { position: absolute; top: 15px; right: 20px; background: #ea4335; color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; z-index: 1500; border-radius: 4px; }
+    .close-btn { position: absolute; top: 15px; right: 20px; background: #ea4335; color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; z-index: 1500; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+
+    #chatWidget { position: absolute; top: 80px; left: 20px; width: 320px; height: 450px; background: #2c2c2c; border: 1px solid #444; border-radius: 8px; z-index: 1400; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.8); overflow: hidden; }
+    #chatHeader { padding: 12px; background: #4285f4; cursor: move; font-weight: bold; display: flex; justify-content: space-between; color: white; user-select: none; }
+    #chatIframe { flex: 1; border: none; background: white; }
+    .min-btn { cursor: pointer; background: rgba(0,0,0,0.2); border: none; color: white; padding: 0 8px; border-radius: 3px; }
+    #chatResizeHandle { width: 20px; height: 20px; position: absolute; right: 0; bottom: 0; cursor: nwse-resize; }
   </style>
 </head>
-<body id="gameBody">
+<body>
 
   <canvas id="particleCanvas"></canvas>
 
@@ -60,13 +76,14 @@
   </div>
 
   <div class="sidebar" id="sidebar">
-    <div style="padding:20px; font-weight:bold; background:#1a1a1a;">Menu</div>
+    <div class="sidebar-header">Explore</div>
     <div class="nav-items">
         <a href="index.html" class="nav-item">🏠 Home</a>
         <a href="chat.html" class="nav-item">💬 Chat</a>
         <a href="games.html" class="nav-item">🎮 Games</a>
     </div>
     <div class="sidebar-footer">
+        <button class="footer-btn settings-btn" onclick="window.location.href='settings.html'">⚙️ Settings</button>
         <button class="footer-btn logout-btn" id="logoutBtn">🚪 Logout</button>
     </div>
   </div>
@@ -76,6 +93,16 @@
 
   <div id="gameView">
     <button class="close-btn" id="closeGameBtn">✕ Exit Game</button>
+    
+    <div id="chatWidget">
+        <div id="chatHeader">
+          <span>💬 Game Chat</span>
+          <button class="min-btn" id="toggleChatBtn">_</button>
+        </div>
+        <iframe id="chatIframe" src="chat.html"></iframe>
+        <div id="chatResizeHandle"></div>
+    </div>
+
     <iframe id="gameIframe" src=""></iframe>
   </div>
 
@@ -97,21 +124,20 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const database = getDatabase(app);
-    let isAdmin = false; // The core value you requested
+    let isAdmin = false;
 
-    // --- Auth Logic ---
+    // --- User Auth & Admin Check ---
     onAuthStateChanged(auth, async user => {
       if (user) {
         const dbRef = ref(database);
         const snap = await get(child(dbRef, `users/${user.uid}`));
         if (snap.exists()) {
           const data = snap.val();
-          document.getElementById("headerUsername").textContent = data.username;
-          document.getElementById("headerAvatar").textContent = data.username[0].toUpperCase();
+          document.getElementById("headerUsername").textContent = data.username || "User";
+          document.getElementById("headerAvatar").textContent = (data.username || "U")[0].toUpperCase();
           
-          // Set isAdmin based on database role
+          // Matches your provided Firebase Rules
           isAdmin = (data.isAdmin === true);
-          if (isAdmin) document.body.classList.add('admin-mode');
         }
         loadGamesAndPins();
       } else {
@@ -119,55 +145,60 @@
       }
     });
 
-    // --- Game Logic ---
+    // --- Loading Games with Global Pins ---
     function loadGamesAndPins() {
       const pinsRef = ref(database, 'pinnedGames');
       
-      fetch('games.json').then(res => res.json()).then(staticGames => {
-        onValue(pinsRef, (snapshot) => {
-          const pinnedData = snapshot.val() || {};
-          
-          const gamesWithPins = staticGames.map(game => {
-            const gameId = btoa(game.path).replace(/=/g, '');
-            return { ...game, id: gameId, pinned: !!pinnedData[gameId] };
-          });
+      fetch('games.json')
+        .then(res => res.json())
+        .then(staticGames => {
+          onValue(pinsRef, (snapshot) => {
+            const pinnedData = snapshot.val() || {};
+            
+            const gamesWithPins = staticGames.map(game => {
+              const gameId = btoa(game.path).replace(/=/g, '');
+              return { ...game, id: gameId, pinned: !!pinnedData[gameId] };
+            });
 
-          // Re-sort: Pinned first
-          gamesWithPins.sort((a, b) => (b.pinned === true) - (a.pinned === true));
-          renderGrid(gamesWithPins);
+            gamesWithPins.sort((a, b) => (b.pinned === true) - (a.pinned === true));
+            renderGrid(gamesWithPins);
+          });
+        })
+        .catch(err => {
+          console.error("Missing games.json file.");
+          document.getElementById('gameGrid').innerHTML = "<p>Failed to load games. Check games.json.</p>";
         });
-      });
     }
 
     function renderGrid(list) {
       const grid = document.getElementById('gameGrid');
       grid.innerHTML = '';
+
       list.forEach(game => {
         const card = document.createElement('div');
         card.className = `game-card ${game.pinned ? 'pinned' : ''}`;
         
-        // Only generate Pin Button HTML if isAdmin is true
-        let adminControls = '';
+        let pinAction = '';
         if (isAdmin) {
-          adminControls = `<button class="admin-pin-btn" data-id="${game.id}">${game.pinned ? '📍 Unpin' : '📌 Pin for all'}</button>`;
+          pinAction = `<button class="admin-pin-btn" data-id="${game.id}">${game.pinned ? '📍 Unpin Game' : '📌 Pin for Everyone'}</button>`;
         }
 
         card.innerHTML = `
           <div class="pin-tag">PINNED</div>
-          <div style="font-size: 1.2rem;">${game.label.replace(/^cl/, '')}</div>
-          <button class="play-btn" data-path="${game.path}">Play Now</button>
-          ${adminControls}
+          <div style="font-size: 1.2rem; font-weight: 700;">${game.label.replace(/^cl/, '')}</div>
+          <button class="play-btn">Play</button>
+          ${pinAction}
         `;
 
-        // Play Button Event
         card.querySelector('.play-btn').onclick = () => {
           document.getElementById('gameIframe').src = game.path;
           document.getElementById('gameView').style.display = 'block';
+          document.body.style.overflow = 'hidden';
         };
 
-        // Pin Button Event (only if it exists)
         if (isAdmin) {
-          card.querySelector('.admin-pin-btn').onclick = () => {
+          card.querySelector('.admin-pin-btn').onclick = (e) => {
+            e.stopPropagation();
             update(ref(database, 'pinnedGames'), { [game.id]: !game.pinned });
           };
         }
@@ -176,7 +207,7 @@
       });
     }
 
-    // --- Interface Handlers ---
+    // --- Sidebar & Close Logic ---
     document.getElementById('hamburgerBtn').onclick = () => {
       document.getElementById('sidebar').classList.add('open');
       document.getElementById('overlay').classList.add('active');
@@ -190,13 +221,60 @@
     document.getElementById('closeGameBtn').onclick = () => {
       document.getElementById('gameIframe').src = '';
       document.getElementById('gameView').style.display = 'none';
+      document.body.style.overflow = 'auto';
     };
 
     document.getElementById('logoutBtn').onclick = () => signOut(auth);
+
+    // --- Floating Chat Drag & Resize ---
+    const widget = document.getElementById("chatWidget");
+    const chatHeader = document.getElementById("chatHeader");
+    const handle = document.getElementById("chatResizeHandle");
+    const chatIframe = document.getElementById("chatIframe");
+
+    document.getElementById('toggleChatBtn').onclick = () => {
+      const isHidden = chatIframe.style.display === "none";
+      chatIframe.style.display = isHidden ? "block" : "none";
+      widget.style.height = isHidden ? "450px" : "45px";
+    };
+
+    let activeAction = null; 
+    let startX, startY, startW, startH, startL, startT;
+
+    function initAction(e, type) {
+      activeAction = type;
+      startX = e.clientX; startY = e.clientY;
+      startW = widget.offsetWidth; startH = widget.offsetHeight;
+      startL = widget.offsetLeft; startT = widget.offsetTop;
+      chatIframe.style.pointerEvents = "none";
+      window.addEventListener('mousemove', runAction);
+      window.addEventListener('mouseup', stopAction);
+    }
+
+    function runAction(e) {
+      if (!activeAction) return;
+      if (activeAction === 'resizing') {
+        widget.style.width = Math.max(200, startW + (e.clientX - startX)) + 'px';
+        widget.style.height = Math.max(100, startH + (e.clientY - startY)) + 'px';
+      } else {
+        widget.style.left = (startL + (e.clientX - startX)) + 'px';
+        widget.style.top = (startT + (e.clientY - startY)) + 'px';
+      }
+    }
+
+    function stopAction() {
+      activeAction = null;
+      chatIframe.style.pointerEvents = "auto";
+      window.removeEventListener('mousemove', runAction);
+      window.removeEventListener('mouseup', stopAction);
+    }
+
+    chatHeader.onmousedown = (e) => { if(e.target.id !== "toggleChatBtn") initAction(e, 'dragging'); };
+    handle.onmousedown = (e) => { e.preventDefault(); initAction(e, 'resizing'); };
   </script>
 
   <script>
-    /* --- Particles Logic --- */
+    /* --- Particle Background --- */
     const canvas = document.getElementById('particleCanvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
@@ -222,15 +300,15 @@
           const dx = p.x - particles[j].x, dy = p.y - particles[j].y;
           const dist = Math.sqrt(dx*dx + dy*dy);
           if (dist < 150) {
-            ctx.strokeStyle = `rgba(255,255,255,${0.2 - dist/750})`; ctx.lineWidth = 0.5;
+            ctx.strokeStyle = `rgba(255,255,255,${0.15 - dist/1000})`; ctx.lineWidth = 0.5;
             ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke();
           }
         }
       });
       requestAnimationFrame(animate);
     }
-    window.onload = () => { init(); animate(); };
     window.addEventListener('resize', init);
+    init(); animate();
   </script>
 </body>
 </html>
