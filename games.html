@@ -32,8 +32,22 @@
     /* Game Layout */
     .search-container { margin: 90px auto 20px; max-width: 600px; padding: 0 20px; position: relative; z-index: 10; }
     #gameSearch { width: 100%; padding: 12px 20px; background: rgba(44,44,44,0.8); border: 2px solid #444; border-radius: 4px; color: white; font-size: 16px; outline: none; }
+    
+    .pinned-section { padding: 20px; position: relative; z-index: 10; }
+    .pinned-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #ffd700; }
+    .pinned-games { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+    
     .game-container { padding: 20px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; position: relative; z-index: 10; }
-    .game-card { background: white; color: black; padding: 15px 30px; cursor: pointer; font-weight: bold; border-radius: 2px; min-width: 120px; text-align: center; }
+    .game-card { background: white; color: black; padding: 15px 30px; cursor: pointer; font-weight: bold; border-radius: 2px; min-width: 120px; text-align: center; position: relative; }
+    .game-card.pinned { background: linear-gradient(135deg, #ffd700, #ffed4e); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); }
+    
+    .pin-btn { 
+      position: absolute; top: 5px; right: 5px; background: #ffd700; 
+      border: none; border-radius: 50%; width: 25px; height: 25px; 
+      cursor: pointer; font-size: 14px; display: none;
+    }
+    .game-card:hover .pin-btn { display: block; }
+    .game-card.pinned .pin-btn { display: block; background: #ff4444; }
 
     /* Game View System */
     #gameView { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: black; z-index: 1300; }
@@ -78,6 +92,12 @@
   <div class="search-container">
     <input type="text" id="gameSearch" placeholder="Search games..." onkeyup="filterGames()">
   </div>
+  
+  <div id="pinnedSection" class="pinned-section" style="display: none;">
+    <div class="pinned-title">📌 Pinned Games</div>
+    <div class="pinned-games" id="pinnedGrid"></div>
+  </div>
+  
   <div class="game-container" id="gameGrid"></div>
 
   <div id="gameView">
@@ -98,7 +118,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getDatabase, ref, get, child, set, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
@@ -115,22 +135,50 @@
     const database = getDatabase(app);
     const dbRef = ref(database);
 
+    let currentUser = null;
+    let isAdmin = false;
+    let pinnedGames = [];
+
+    // Load pinned games from Firebase
+    function loadPinnedGames() {
+      onValue(ref(database, 'pinnedGames'), (snap) => {
+        pinnedGames = snap.val() || [];
+        renderGames(allGames);
+      });
+    }
+
+    // Toggle pin status
+    window.togglePin = async (gameLabel) => {
+      if (!isAdmin) return;
+      
+      const index = pinnedGames.indexOf(gameLabel);
+      if (index > -1) {
+        pinnedGames.splice(index, 1);
+      } else {
+        pinnedGames.push(gameLabel);
+      }
+      
+      await set(ref(database, 'pinnedGames'), pinnedGames);
+    };
+
     // Load user info from Firebase
     onAuthStateChanged(auth, async user => {
       if (user) {
+        currentUser = user;
         const snap = await get(child(dbRef, `users/${user.uid}`));
         if (snap.exists()) {
           const data = snap.val();
+          isAdmin = data.isAdmin === true;
           document.getElementById("gameUsername").textContent = data.username;
           document.getElementById("gameUserAvatar").textContent = data.username[0].toUpperCase();
+          loadPinnedGames();
         } else {
-          // Fallback to email if no username in database
           const username = user.email.split('@')[0];
           document.getElementById("gameUsername").textContent = username;
           document.getElementById("gameUserAvatar").textContent = username[0].toUpperCase();
+          loadPinnedGames();
         }
       } else {
-        // Not logged in, redirect to home
         window.location.href = 'index.html';
       }
     });
@@ -140,11 +188,9 @@
       const sidebar = document.getElementById("sidebar");
       if (confirm('Are you sure you want to logout?')) {
         signOut(auth).then(() => {
-          // Close sidebar if open
           if (sidebar.classList.contains("open")) {
             toggleSidebar();
           }
-          // Redirect to home/login page
           window.location.href = 'index.html';
         }).catch((error) => {
           console.error('Logout error:', error);
@@ -167,20 +213,54 @@
 
     function renderGames(list) {
       const grid = document.getElementById('gameGrid');
+      const pinnedGrid = document.getElementById('pinnedGrid');
+      const pinnedSection = document.getElementById('pinnedSection');
+      
       grid.innerHTML = '';
-      list.forEach(game => {
-        const btn = document.createElement('div');
-        btn.className = 'game-card';
-        let label = game.label.toLowerCase();
-        if (label.startsWith('cl')) label = label.slice(2);
-        btn.innerText = label;
-        btn.onclick = () => {
-          document.getElementById('gameIframe').src = game.path;
-          document.getElementById('gameView').style.display = 'block';
-          document.body.style.overflow = 'hidden';
+      pinnedGrid.innerHTML = '';
+      
+      // Separate pinned and unpinned games
+      const pinned = list.filter(g => pinnedGames.includes(g.label));
+      const unpinned = list.filter(g => !pinnedGames.includes(g.label));
+      
+      // Show pinned section only if there are pinned games
+      if (pinned.length > 0) {
+        pinnedSection.style.display = 'block';
+        pinned.forEach(game => createGameCard(game, pinnedGrid, true));
+      } else {
+        pinnedSection.style.display = 'none';
+      }
+      
+      // Render unpinned games
+      unpinned.forEach(game => createGameCard(game, grid, false));
+    }
+
+    function createGameCard(game, container, isPinned) {
+      const btn = document.createElement('div');
+      btn.className = 'game-card' + (isPinned ? ' pinned' : '');
+      let label = game.label.toLowerCase();
+      if (label.startsWith('cl')) label = label.slice(2);
+      btn.innerText = label;
+      
+      // Add pin button for admins
+      if (isAdmin) {
+        const pinBtn = document.createElement('button');
+        pinBtn.className = 'pin-btn';
+        pinBtn.innerHTML = isPinned ? '✕' : '📌';
+        pinBtn.title = isPinned ? 'Unpin' : 'Pin';
+        pinBtn.onclick = (e) => {
+          e.stopPropagation();
+          togglePin(game.label);
         };
-        grid.appendChild(btn);
-      });
+        btn.appendChild(pinBtn);
+      }
+      
+      btn.onclick = () => {
+        document.getElementById('gameIframe').src = game.path;
+        document.getElementById('gameView').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+      };
+      container.appendChild(btn);
     }
 
     function filterGames() {
@@ -218,32 +298,27 @@
     const canvas = document.getElementById('particleCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Mouse interaction object
     let mouse = {
         x: null,
         y: null,
         radius: 120
     };
 
-    // Track Mouse Position
     window.addEventListener('mousemove', (event) => {
         mouse.x = event.x;
         mouse.y = event.y;
     });
 
-    // Track Touch Position (Mobile)
     window.addEventListener('touchmove', (event) => {
         mouse.x = event.touches[0].clientX;
         mouse.y = event.touches[0].clientY;
     });
 
-    // Reset interaction when mouse leaves window
     window.addEventListener('mouseout', () => {
         mouse.x = undefined;
         mouse.y = undefined;
     });
 
-    // Haptic Feedback Helper
     let lastVibrate = 0;
     function triggerHaptic() {
         if (!navigator.vibrate) return;
@@ -274,11 +349,9 @@
       }
 
       update() {
-        // Basic Movement
         this.x += this.vx;
         this.y += this.vy;
 
-        // Mouse Interaction & Haptics
         if (mouse.x != undefined && mouse.y != undefined) {
             let dx = mouse.x - this.x;
             let dy = mouse.y - this.y;
@@ -302,7 +375,6 @@
             }
         }
 
-        // Screen Edge Bouncing
         if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
         if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
       }
@@ -315,18 +387,16 @@
     
     function animate() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const color = '255, 255, 255'; // White particles for dark theme
+      const color = '255, 255, 255';
       
       particles.forEach((p, i) => {
         p.update();
         
-        // Draw particle
         ctx.fillStyle = `rgba(${color}, 0.7)`; 
         ctx.beginPath(); 
         ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); 
         ctx.fill();
 
-        // Draw connecting lines
         for (let j = i + 1; j < particles.length; j++) {
           const dx = p.x - particles[j].x;
           const dy = p.y - particles[j].y;
@@ -349,11 +419,8 @@
       init();
     });
     
-    // Initialize particles and start animation
     init(); 
     animate();
-    
-    // Load games on page load
     loadGames();
   </script>
 </body>
