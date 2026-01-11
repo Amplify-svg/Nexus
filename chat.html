@@ -36,7 +36,7 @@
     @keyframes messageFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-    /* --- ADMIN TOOLTIP & HOVER --- */
+    /* Admin Tooltip */
     .message-user { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: inline-block; position: relative; cursor: default; }
     .admin-viewable { text-decoration: underline dotted #4285f4; cursor: help; }
 
@@ -44,7 +44,7 @@
       visibility: hidden; width: 200px; background-color: #222; color: #fff;
       text-align: center; border-radius: 6px; padding: 10px;
       position: absolute; z-index: 100; bottom: 125%; left: 0;
-      opacity: 0; transition: opacity 0.2s; border: 1px solid #444; font-weight: normal; font-size: 12px;
+      opacity: 0; transition: opacity 0.2s; border: 1px solid #444; font-weight: normal; font-size: 11px;
     }
     .message-user:hover .admin-tooltip { visibility: visible; opacity: 1; }
 
@@ -52,8 +52,7 @@
     .btn-mute { background: #ff8800; }
     .btn-ban { background: #ea4335; }
 
-    .delete-btn { color: rgba(255,255,255,0.5); margin-left: 8px; cursor: pointer; font-size: 16px; }
-    .delete-btn:hover { color: #ff4d4d; }
+    .delete-btn { color: rgba(255,255,255,0.4); margin-left: 8px; cursor: pointer; }
     
     /* Input Bar */
     #messageInputBox {
@@ -62,42 +61,37 @@
       display: flex; gap: 10px; align-items: center; border-top: 1px solid #333;
     }
     #messageInput { flex: 1; padding: 12px 20px; border-radius: 30px; border: 1px solid #444; background: #111; color: white; outline: none; }
-    #messageInput:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* Member List Drawer */
     #memberList {
       position: fixed; right: -320px; top: 0; width: 300px; height: 100vh;
-      background: #1a1a1a; border-left: 1px solid #333; transition: 0.3s; z-index: 4000; padding: 80px 20px 20px;
+      background: #1a1a1a; border-left: 1px solid #333; transition: 0.3s; z-index: 4000; padding: 20px;
+      display: flex; flex-direction: column;
     }
     #memberList.open { right: 0; }
     .member-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #333; }
-
-    /* Modals */
-    #adminModal {
-      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: #222; padding: 30px; border-radius: 12px; z-index: 5000; width: 90%; max-width: 400px; border: 1px solid #444;
-    }
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 4999; }
+    
+    .close-drawer { background: none; border: none; color: #888; font-size: 24px; cursor: pointer; align-self: flex-end; }
+    .close-drawer:hover { color: white; }
   </style>
 </head>
 <body class="dark-mode">
 
-  <canvas id="particleCanvas"></canvas>
+  <canvas id="particleCanvas" style="position:fixed; top:0; left:0; pointer-events:none; z-index:1;"></canvas>
   <script src="global.js"></script>
 
   <div class="modal-overlay" id="modalOverlay" onclick="closeAdminSettings()"></div>
-  <div id="adminModal">
-    <h3 style="margin-bottom: 20px;">Global Admin Style</h3>
-    <label style="display:block; font-size:12px; color:#888;">BUBBLE COLOR</label>
-    <input type="color" id="bubbleColorInput" style="width:100%; height:40px; margin-bottom:15px;">
-    <label style="display:block; font-size:12px; color:#888;">NAME COLOR</label>
-    <input type="color" id="nameColorInput" style="width:100%; height:40px; margin-bottom:15px;">
-    <label style="display:flex; gap:10px; margin-bottom: 10px;"><input type="checkbox" id="gradientToggle"> Gradient</label>
-    <label style="display:flex; gap:10px; margin-bottom: 20px;"><input type="checkbox" id="animateToggle"> Animation</label>
-    <button onclick="saveAdminSettings()" style="width:100%; padding:12px; background:#4285f4; color:white; border:none; border-radius:8px; cursor:pointer;">Save Changes</button>
+  <div id="adminModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#222; padding:30px; border-radius:12px; z-index:5000; border:1px solid #444;">
+    <h3 style="margin-bottom:20px;">Global Admin Style</h3>
+    <input type="color" id="bubbleColorInput" style="width:100%; margin-bottom:10px;">
+    <input type="color" id="nameColorInput" style="width:100%; margin-bottom:10px;">
+    <label style="display:block;"><input type="checkbox" id="gradientToggle"> Gradient</label>
+    <label style="display:block; margin-bottom:20px;"><input type="checkbox" id="animateToggle"> Animation</label>
+    <button onclick="saveAdminSettings()" style="width:100%; padding:10px; background:#4285f4; color:white; border:none; border-radius:5px;">Save</button>
   </div>
 
   <div id="memberList">
+    <button class="close-drawer" onclick="toggleMemberList()">×</button>
     <h3 style="margin-bottom:15px;">Online Members (<span id="onlineCount">0</span>)</h3>
     <div id="memberListContent"></div>
   </div>
@@ -149,29 +143,24 @@
         isBanned = data.isBanned === true;
 
         if (data.kicked && !isAdmin) {
-          alert("You have been banned.");
+          alert("Banned.");
           signOut(auth).then(() => window.location.href = 'index.html');
           return;
         }
 
         document.getElementById('adminActions').style.display = isAdmin ? 'flex' : 'none';
         document.getElementById('messageInput').disabled = isBanned;
-        document.getElementById('messageInput').placeholder = isBanned ? "YOU ARE MUTED" : "Type a message...";
-        
         updateStatus(true);
       });
 
-      onValue(ref(database, 'adminSettings/global'), (snap) => { if(snap.exists()) adminSettings = snap.val(); });
+      onValue(ref(database, 'adminSettings/global'), (s) => { if(s.exists()) adminSettings = s.val(); });
       setupChat();
     });
 
     function setupChat() {
-      onChildAdded(ref(database, 'messages'), (snap) => {
-        renderMessage(snap.key, snap.val());
-        document.getElementById("chatBox").scrollTop = document.getElementById("chatBox").scrollHeight;
-      });
-      onChildRemoved(ref(database, 'messages'), (snap) => {
-        const el = document.getElementById(`msg-${snap.key}`);
+      onChildAdded(ref(database, 'messages'), (s) => renderMessage(s.key, s.val()));
+      onChildRemoved(ref(database, 'messages'), (s) => {
+        const el = document.getElementById(`msg-${s.key}`);
         if (el) el.remove();
       });
       onValue(ref(database, 'online'), (snap) => updateMemberList(snap.val() || {}));
@@ -179,6 +168,7 @@
 
     function renderMessage(id, msg) {
       const isOwn = currentUser && msg.userId === currentUser.uid;
+      const chatBox = document.getElementById("chatBox");
       const div = document.createElement("div");
       div.id = `msg-${id}`;
       div.className = `message ${isOwn ? 'own' : 'other'}`;
@@ -187,9 +177,7 @@
         if (msg.style.gradient) {
           div.classList.add('admin-gradient');
           if (msg.style.animate) div.classList.add('animate');
-        } else {
-          div.style.background = msg.style.bubbleColor;
-        }
+        } else { div.style.background = msg.style.bubbleColor; }
       }
 
       const userSpan = document.createElement("span");
@@ -200,11 +188,9 @@
       if (isAdmin && !isOwn) {
         const tooltip = document.createElement("div");
         tooltip.className = "admin-tooltip";
-        tooltip.innerHTML = `
-          <b>${msg.email || 'No Email'}</b><br>
-          <button class="tooltip-btn btn-mute" onclick="adminMute('${msg.userId}')">Mute/Unmute</button>
-          <button class="tooltip-btn btn-ban" onclick="adminBan('${msg.userId}')">BAN</button>
-        `;
+        tooltip.innerHTML = `<b>${msg.email || 'No Email'}</b><br>
+          <button class="tooltip-btn btn-mute" onclick="adminMute('${msg.userId}')">Mute</button>
+          <button class="tooltip-btn btn-ban" onclick="adminBan('${msg.userId}')">BAN</button>`;
         userSpan.appendChild(tooltip);
       }
 
@@ -219,46 +205,43 @@
       }
 
       div.append(userSpan, textDiv);
-      document.getElementById("chatBox").appendChild(div);
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     function updateMemberList(users) {
       const content = document.getElementById('memberListContent');
       content.innerHTML = '';
       let count = 0;
-
       Object.entries(users).forEach(([uid, data]) => {
         if (!data.isOnline) return;
         count++;
         const div = document.createElement('div');
         div.className = 'member-item';
         div.innerHTML = `<span>${data.username}</span>`;
-        
         if (isAdmin && uid !== currentUser.uid) {
-          const controls = document.createElement('div');
-          controls.innerHTML = `
-            <button onclick="adminMute('${uid}')" style="background:#666; color:white; border:none; border-radius:4px; padding:2px 5px; cursor:pointer; font-size:10px;">MUTE</button>
-            <button onclick="adminBan('${uid}')" style="background:#ea4335; color:white; border:none; border-radius:4px; padding:2px 5px; cursor:pointer; font-size:10px;">BAN</button>
-          `;
-          div.appendChild(controls);
+           div.innerHTML += `<button onclick="adminBan('${uid}')" style="background:#ea4335; color:white; border:none; border-radius:4px; font-size:10px; padding:2px 5px;">BAN</button>`;
         }
         content.appendChild(div);
       });
       document.getElementById('onlineCount').textContent = count;
     }
 
-    // Admin Utilities
     window.adminMute = async (uid) => {
       const s = await get(child(ref(database), `users/${uid}/isBanned`));
       update(ref(database, `users/${uid}`), { isBanned: !s.val() });
     };
 
     window.adminBan = (uid) => {
-      if(confirm("Ban this user permanently?")) update(ref(database, `users/${uid}`), { kicked: true });
+      if(confirm("Permanently ban user?")) update(ref(database, `users/${uid}`), { kicked: true });
     };
 
     window.clearChat = () => {
-      if(confirm("Wipe all messages?")) remove(ref(database, 'messages')).then(() => document.getElementById("chatBox").innerHTML = "");
+      if(confirm("Clear chat?")) {
+        remove(ref(database, 'messages'))
+          .then(() => { document.getElementById("chatBox").innerHTML = ""; })
+          .catch(e => alert("Error: " + e.message));
+      }
     };
 
     window.sendMessage = () => {
@@ -276,31 +259,25 @@
       input.value = "";
     };
 
-    window.openAdminSettings = () => {
-      document.getElementById('modalOverlay').style.display = 'block';
-      document.getElementById('adminModal').style.display = 'block';
-    };
-
-    window.closeAdminSettings = () => {
-      document.getElementById('modalOverlay').style.display = 'none';
-      document.getElementById('adminModal').style.display = 'none';
-    };
-
-    window.saveAdminSettings = () => {
-      const s = {
-        gradient: document.getElementById('gradientToggle').checked,
-        animate: document.getElementById('animateToggle').checked,
-        bubbleColor: document.getElementById('bubbleColorInput').value,
-        nameColor: document.getElementById('nameColorInput').value
-      };
-      update(ref(database, 'adminSettings/global'), s);
-      closeAdminSettings();
-    };
-
     window.toggleMemberList = () => document.getElementById('memberList').classList.toggle('open');
+    window.openAdminSettings = () => { document.getElementById('adminModal').style.display = 'block'; };
+    window.closeAdminSettings = () => { document.getElementById('adminModal').style.display = 'none'; };
+    window.saveAdminSettings = () => {
+        const s = {
+            gradient: document.getElementById('gradientToggle').checked,
+            animate: document.getElementById('animateToggle').checked,
+            bubbleColor: document.getElementById('bubbleColorInput').value,
+            nameColor: document.getElementById('nameColorInput').value
+        };
+        update(ref(database, 'adminSettings/global'), s);
+        closeAdminSettings();
+    };
+
     function updateStatus(online) { if(currentUser) set(ref(database, `online/${currentUser.uid}`), { username: currentUsername, isOnline: online }); }
     document.getElementById("messageInput").addEventListener("keypress", (e) => { if(e.key === 'Enter') sendMessage(); });
     window.onbeforeunload = () => updateStatus(false);
   </script>
+  
+  <script src="particles.js"></script>
 </body>
 </html>
