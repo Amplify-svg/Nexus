@@ -1,4 +1,4 @@
-/* --- NEXUS MASTER STYLES 2026 --- */
+/* --- NEXUS MASTER STYLES --- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Poppins:wght@600&display=swap');
 
 :root {
@@ -7,22 +7,24 @@
   --glass: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.1);
   --accent: #4285f4;
-  --accent-glow: rgba(66, 133, 244, 0.4);
   --text-main: #e0e0e0;
-  --text-dim: #999;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Inter', sans-serif;
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+/* Home page should be scrollable, App pages should be fixed */
+body { 
+  background-color: var(--bg-dark); 
+  color: var(--text-main); 
+  line-height: 1.6;
 }
 
-body {
-  background-color: var(--bg-dark);
-  color: var(--text-main);
-  overflow-x: hidden;
+/* This class will only be on Call/Chat pages to lock the screen */
+body.app-mode {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* --- THE GLASS ENGINE --- */
@@ -32,35 +34,39 @@ body {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  padding: 2rem;
 }
 
-/* --- NAVIGATION --- */
-#topNav {
-  position: fixed;
-  top: 0;
+/* --- INPUTS & BUTTONS --- */
+input {
   width: 100%;
-  height: 70px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--glass-border);
+  padding: 12px;
+  border-radius: 8px;
+  color: white;
+  margin-bottom: 15px;
+}
+
+.btn-nexus {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* --- LOGIN CARD (Specifically for Home.html) --- */
+.auth-container {
+  min-height: 100vh;
   display: flex;
   align-items: center;
-  padding: 0 30px;
-  background: rgba(10, 10, 10, 0.8);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--glass-border);
-  z-index: 1000;
-}
-
-.logo {
-  font-family: 'Poppins', sans-serif;
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  background: linear-gradient(90deg, #fff, var(--accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* --- BUTTONS --- */
+  justify-content: center;
+  padding: 20px;
+}/* --- BUTTONS --- */
 .btn-nexus {
   background: var(--accent);
   color: white;
