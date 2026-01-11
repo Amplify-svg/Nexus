@@ -1,39 +1,76 @@
-// global.js
-// global.js update
+/* global.js - Controls Sidebar, Header, and Dark Mode */
+
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Inject the Header and Sidebar HTML automatically
+    const body = document.body;
     const navHTML = `
-        <div class="header" id="header" style="display: none;">
-            <div class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></div>
+        <div class="header">
+            <div class="hamburger" id="menuBtn">
+                <span></span><span></span><span></span>
+            </div>
+            <div class="logo" style="font-weight:bold; font-size:20px; color:#4285f4;">NEXUS</div>
             <div class="user-info">
-                <div class="avatar" id="userAvatar">U</div>
-                <span id="headerUsername">Username</span>
+                <div class="avatar" id="userInitial">?</div>
             </div>
         </div>
 
         <div class="sidebar" id="sidebar">
-            <div class="sidebar-header">Menu</div>
+            <div class="sidebar-header">NEXUS MENU</div>
             <div class="nav-items">
-                <div class="nav-item" onclick="window.location.href = 'Home.html'">🏠 Home</div>
-                <div class="nav-item proxy-link" onclick="window.location.href = 'math.html'">🌐 Research Portal</div>
-                <div class="nav-item" onclick="window.location.href = 'chat.html'">💬 Chat</div>
-                <div class="nav-item" onclick="window.location.href = 'call.html'">📞 Video Call</div>
-                <div class="nav-item" onclick="window.location.href = 'games.html'">🎮 Games</div>
+                <a href="Home.html" class="nav-item">🏠 Home</a>
+                <a href="chat.html" class="nav-item">💬 Global Chat</a>
+                <a href="call.html" class="nav-item">📞 Video Call</a>
+                <div class="nav-item proxy-link">🌐 Proxy Settings</div>
             </div>
             <div class="sidebar-footer">
-                <button class="footer-btn settings-btn" onclick="window.location.href='settings.html'">⚙️ Settings</button>
-                <button class="footer-btn logout-btn" onclick="logout()">🚪 Logout</button>
+                <button class="footer-btn settings-btn" id="darkToggle">🌓 Toggle Dark Mode</button>
+                <button class="footer-btn logout-btn" id="logoutBtn">🚪 Logout</button>
             </div>
         </div>
-        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+        <div class="overlay" id="overlay"></div>
     `;
 
-    document.body.insertAdjacentHTML('afterbegin', navHTML);
-});
+    // Insert at the beginning of body
+    body.insertAdjacentHTML('afterbegin', navHTML);
 
-// 2. Sidebar Toggle Logic
-window.toggleSidebar = () => {
-    const sidebar = document.getElementById("sidebar");
-    const overlay = document.getElementById("overlay");
-    if (sidebar) sidebar.classList.toggle("open");
-    if (overlay) overlay.classList.toggle("active");
-};
+    // 2. Element Selectors
+    const menuBtn = document.getElementById('menuBtn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    const darkToggle = document.getElementById('darkToggle');
+
+    // 3. Sidebar Toggle Logic
+    const toggleSidebar = () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+    };
+
+    menuBtn.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+
+    // 4. Dark Mode Logic (Syncs with LocalStorage)
+    const enableDarkMode = () => {
+        body.classList.add('dark-mode');
+        localStorage.setItem('theme', 'dark');
+    };
+
+    const disableDarkMode = () => {
+        body.classList.remove('dark-mode');
+        localStorage.setItem('theme', 'light');
+    };
+
+    // Check saved preference
+    if (localStorage.getItem('theme') === 'dark') {
+        enableDarkMode();
+    }
+
+    darkToggle.addEventListener('click', () => {
+        body.classList.contains('dark-mode') ? disableDarkMode() : enableDarkMode();
+    });
+
+    // 5. User Initial Display
+    const savedUser = localStorage.getItem('userEmail'); // Set this during login in auth.js
+    if (savedUser) {
+        document.getElementById('userInitial').textContent = savedUser.charAt(0).toUpperCase();
+    }
+});
