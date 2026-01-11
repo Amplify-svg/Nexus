@@ -239,7 +239,7 @@
     let adminSettings = { gradient: true, animate: true, bubbleColor: "#667eea", nameColor: "#ffffff" };
     let onlineUsers = {};
 
-    window.goBack = () => { window.location.href = 'index.html'; };
+    window.goBack = () => { window.location.href = 'cat.html'; };
 
     // Online Status Tracking
     function updateOnlineStatus(online) {
@@ -439,7 +439,7 @@
 
     // Auth & Initialization
     onAuthStateChanged(auth, async (user) => {
-      if (!user) { window.location.href = 'index.html'; return; }
+      if (!user) { window.location.href = 'cat.html'; return; }
       currentUser = user;
       
       onValue(ref(database, `users/${user.uid}`), (snap) => {
@@ -452,7 +452,7 @@
           alert("You were banned from the chat.");
           updateOnlineStatus(false);
           signOut(auth).finally(() => {
-            window.location.href = 'index.html';
+            window.location.href = 'cat.html';
           });
           return;
         }
