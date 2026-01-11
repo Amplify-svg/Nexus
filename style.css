@@ -3,7 +3,7 @@
 
 body { 
     font-family: 'Segoe UI', Arial, sans-serif; 
-    background: #f5f5f5; 
+    background: #ffffff; /* FIXED: Changed from #f5f5f5 to white */
     color: #333;
     transition: background 0.3s, color 0.3s; 
     overflow-x: hidden; 
@@ -90,7 +90,7 @@ body {
     flex: 1; 
     padding: 20px 0; 
     display: flex; 
-    flex-direction: column; /* Forces vertical list */
+    flex-direction: column; 
 }
 
 .nav-item { 
