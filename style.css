@@ -1,142 +1,169 @@
-/* --- NEXUS MASTER STYLES --- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Poppins:wght@600&display=swap');
+/* style.css */
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-:root {
-  --bg-dark: #0a0a0a;
-  --surface: #161616;
-  --glass: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --accent: #4285f4;
-  --text-main: #e0e0e0;
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-
-/* Home page should be scrollable, App pages should be fixed */
 body { 
-  background-color: var(--bg-dark); 
-  color: var(--text-main); 
-  line-height: 1.6;
+    font-family: Arial, sans-serif; 
+    background: #f5f5f5; /* Light mode default */
+    transition: background 0.3s; 
+    overflow-x: hidden; 
 }
 
-/* This class will only be on Call/Chat pages to lock the screen */
-body.app-mode {
-  height: 100vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+#particleCanvas { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    z-index: -1; 
+    pointer-events: none; 
 }
 
-/* --- THE GLASS ENGINE --- */
-.glass-panel {
-  background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  padding: 2rem;
+/* Header & Sidebar Styles */
+.header { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 60px; 
+    background: rgba(255,255,255,0.85); /* Transparent to see particles */
+    backdrop-filter: blur(8px); 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+    display: flex; 
+    align-items: center; 
+    padding: 0 20px; 
+    z-index: 100; 
 }
 
-/* --- INPUTS & BUTTONS --- */
-input {
-  width: 100%;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--glass-border);
-  padding: 12px;
-  border-radius: 8px;
-  color: white;
-  margin-bottom: 15px;
+.hamburger { 
+    width: 30px; 
+    height: 30px; 
+    cursor: pointer; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: space-around; 
+    margin-right: 15px; 
 }
 
-.btn-nexus {
-  background: var(--accent);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  width: 100%;
+.hamburger span { width: 100%; height: 3px; background: #333; border-radius: 2px; }
+
+.user-info { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+.avatar { 
+    width: 35px; 
+    height: 35px; 
+    border-radius: 50%; 
+    background: #4285f4; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    color: white; 
+    font-weight: bold; 
 }
 
-/* --- LOGIN CARD (Specifically for Home.html) --- */
-.auth-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}/* --- BUTTONS --- */
-.btn-nexus {
-  background: var(--accent);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 15px var(--accent-glow);
+/* Sidebar */
+.sidebar { 
+    position: fixed; 
+    top: 0; 
+    left: -280px; 
+    width: 280px; 
+    height: 100vh; 
+    background: rgba(255, 255, 255, 0.95); 
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1); 
+    transition: left 0.3s; 
+    z-index: 200; 
+    display: flex; 
+    flex-direction: column; 
 }
 
-.btn-nexus:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 25px var(--accent);
+.sidebar.open { left: 0; }
+
+.sidebar-header { padding: 20px; background: #4285f4; color: white; font-size: 24px; font-weight: bold; }
+
+.nav-items { flex: 1; padding: 20px 0; }
+
+.nav-item { 
+    padding: 15px 25px; 
+    cursor: pointer; 
+    transition: background 0.2s; 
+    font-size: 18px; 
+    color: #333; 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    text-decoration: none; /* In case you use <a> tags */
 }
 
-/* --- VIDEO CALL ELEMENTS --- */
-.video-container {
-  border-radius: 20px;
-  overflow: hidden;
-  border: 2px solid var(--glass-border);
-  background: #000;
-  transition: border-color 0.3s;
+.nav-item:hover { background: #f0f0f0; }
+
+.nav-item.proxy-link { color: #4285f4; font-weight: bold; border-left: 4px solid #4285f4; }
+
+.sidebar-footer { padding: 20px; border-top: 1px solid #ddd; }
+
+.footer-btn { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+
+.settings-btn { background: #666; color: white; }
+
+.logout-btn { background: #ea4335; color: white; }
+
+.overlay { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.5); 
+    opacity: 0; 
+    pointer-events: none; 
+    transition: opacity 0.3s; 
+    z-index: 150; 
 }
 
-.video-container:hover {
-  border-color: var(--accent);
+.overlay.active { opacity: 1; pointer-events: all; }
+
+/* Content Containers */
+.container { 
+    max-width: 400px; 
+    margin: 100px auto 50px; 
+    padding: 20px; 
+    position: relative; 
+    z-index: 10; 
 }
 
-/* --- CHAT BUBBLES --- */
-.message {
-  border-radius: 15px;
-  padding: 12px 18px;
-  max-width: 80%;
-  font-size: 14px;
-  margin-bottom: 8px;
+.auth-box { 
+    background: rgba(255, 255, 255, 0.9); 
+    padding: 30px; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+    backdrop-filter: blur(5px);
 }
 
-.my-message {
-  background: var(--accent);
-  color: white;
-  border-bottom-right-radius: 2px;
+h2 { margin-bottom: 20px; color: #333; }
+
+input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
+
+button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+
+.primary { background: #4285f4; color: white; }
+
+.secondary { background: #34a853; color: white; }
+
+/* Dark Mode Styles */
+body.dark-mode { background: #121212; color: white; }
+
+body.dark-mode .auth-box, 
+body.dark-mode .header, 
+body.dark-mode .sidebar { 
+    background: rgba(30, 30, 30, 0.9); 
+    color: white; 
+    border-color: #444;
 }
 
-.other-message {
-  background: var(--surface);
-  color: white;
-  border: 1px solid var(--glass-border);
-  border-bottom-left-radius: 2px;
-}
+body.dark-mode .hamburger span { background: white; }
 
-/* --- INPUT FIELDS --- */
-input[type="text"], input[type="email"], input[type="password"] {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  border-radius: 10px;
-  padding: 12px;
-  color: white;
-  outline: none;
-  transition: 0.3s;
-}
+body.dark-mode .nav-item { color: white; }
 
-input:focus {
-  border-color: var(--accent);
-  background: rgba(255, 255, 255, 0.08);
-}
+body.dark-mode .nav-item:hover { background: #333; }
 
-/* --- SCROLLBAR --- */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: var(--bg-dark); }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+body.dark-mode input { background: #2a2a2a; color: white; border-color: #444; }
+
+body.dark-mode h2 { color: white; }
+
+body.dark-mode .nav-item.proxy-link { color: #8ab4f8; border-color: #8ab4f8; }
