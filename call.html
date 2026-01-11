@@ -3,40 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Video Call</title>
-  <link rel="icon" href="data:,">
+  <title>Nexus - Video Call</title>
+  <link rel="stylesheet" href="style.css">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #18191a; color: white; overflow: hidden; }
+    /* Specific styling for the Video Call components */
+    body { background: #0f0f0f; color: white; overflow: hidden; }
     
-    .header { position: fixed; top: 0; width: 100%; height: 60px; background: #242526; display: flex; align-items: center; padding: 0 20px; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-    
-    /* --- VIDEO CALL UI --- */
-    #callOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; color: white; }
-    .video-grid { display: flex; gap: 15px; width: 90%; max-width: 1200px; height: 70vh; position: relative; }
+    #callOverlay { 
+      display: none; position: fixed; inset: 0; 
+      background: rgba(0,0,0,0.95); z-index: 2000; 
+      flex-direction: column; align-items: center; justify-content: center; 
+    }
+    .video-grid { display: flex; gap: 15px; width: 90%; max-width: 1200px; height: 60vh; position: relative; }
     #remoteVideo { flex: 1; background: #000; border-radius: 15px; object-fit: cover; }
-    #localVideo { position: absolute; width: 220px; height: 165px; bottom: 20px; right: 20px; border: 3px solid #0084ff; border-radius: 12px; object-fit: cover; transform: scaleX(-1); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    #localVideo { 
+      position: absolute; width: 200px; height: 150px; 
+      bottom: 20px; right: 20px; border: 3px solid #4285f4; 
+      border-radius: 12px; object-fit: cover; transform: scaleX(-1); 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
+    }
     .controls { margin-top: 30px; display: flex; gap: 20px; }
     .btn-call { width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer; font-size: 24px; transition: 0.2s; }
     .btn-call:hover { transform: scale(1.1); }
     
-    /* --- MEMBER LIST --- */
-    #memberList { position: fixed; right: -320px; top: 60px; width: 300px; bottom: 0; background: #242526; transition: 0.3s; padding: 20px; z-index: 99; box-shadow: -2px 0 10px rgba(0,0,0,0.3); overflow-y: auto; }
+    #memberList { 
+      position: fixed; right: -320px; top: 60px; width: 300px; bottom: 0; 
+      background: rgba(30, 30, 30, 0.9); backdrop-filter: blur(10px); 
+      transition: 0.3s; padding: 20px; z-index: 99; border-left: 1px solid #333; 
+    }
     #memberList.open { right: 0; }
-    #memberList h3 { margin-bottom: 20px; color: #e4e6eb; }
-    
-    .user-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 10px; background: #3a3b3c; border-radius: 10px; }
-    .call-btn { background: #0084ff; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 18px; }
-    .call-btn:hover { background: #0066cc; }
-    
-    button { background: #3a3b3c; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
-    button:hover { background: #4a4b4c; }
+    .user-item { 
+      display: flex; justify-content: space-between; align-items: center; 
+      padding: 12px; margin-bottom: 10px; background: #2a2a2a; border-radius: 10px; 
+    }
+    .call-btn-small { background: #4285f4; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; }
+
+    /* Button to trigger the member list */
+    .toggle-members {
+        position: fixed; top: 75px; right: 20px; z-index: 101;
+        background: #4285f4; color: white; padding: 10px 20px; border-radius: 5px;
+    }
   </style>
 </head>
 <body>
 
+  <canvas id="particleCanvas"></canvas>
+
+  <button class="toggle-members" onclick="toggleList()">👥 Online Users</button>
+
+  <div id="memberList">
+    <h3 style="margin-bottom: 20px;">Available Peers</h3>
+    <div id="onlineUsers"></div>
+  </div>
+
   <div id="callOverlay">
-    <h2 id="callStatus">Connecting...</h2>
+    <h2 id="callStatus" style="margin-bottom: 20px;">Connecting...</h2>
     <div class="video-grid">
       <video id="remoteVideo" autoplay playsinline></video>
       <video id="localVideo" autoplay playsinline muted></video>
@@ -47,23 +68,13 @@
     </div>
   </div>
 
-  <div class="header">
-    <button onclick="toggleList()">👥 Online Users</button>
-    <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
-      <span id="uName">User</span>
-    </div>
-  </div>
-
-  <div id="memberList">
-    <h3>Online Users</h3>
-    <div id="onlineUsers"></div>
-  </div>
-
+  <script src="global.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { getDatabase, ref, push, set, onValue, remove, update, onChildAdded } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
+    // Re-use your config
     const firebaseConfig = {
       apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
       authDomain: "chat-or-somethig.firebaseapp.com",
@@ -71,8 +82,7 @@
       projectId: "chat-or-somethig",
       storageBucket: "chat-or-somethig.firebasestorage.app",
       messagingSenderId: "598777875087",
-      appId: "1:598777875087:web:d100536dd269bc0a9d7efa",
-      measurementId: "G-VQQ0TYRNNH"
+      appId: "1:598777875087:web:d100536dd269bc0a9d7efa"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -89,27 +99,30 @@
       ]
     };
 
+    // Sync with your Auth logic
     onAuthStateChanged(auth, (user) => {
-      if (!user) { location.href = 'index.html'; return; }
+      if (!user) { location.href = 'Home.html'; return; }
       currentUser = user;
       currentUsername = user.email.split('@')[0];
-      document.getElementById("uName").textContent = currentUsername;
-
+      
+      // Mark as online specifically for calling
       set(ref(database, `online/${user.uid}`), { name: currentUsername });
       
-      // Listen for incoming calls
+      // Cleanup when closing tab
+      onDisconnect(ref(database, `online/${user.uid}`)).remove();
+
       onValue(ref(database, `calls/${user.uid}`), (snap) => {
         const data = snap.val();
         if (data && data.offer && !pc) {
           window.incomingCallData = data;
           document.getElementById("callOverlay").style.display = "flex";
-          document.getElementById("callStatus").textContent = "Incoming Call from " + data.name;
+          document.getElementById("callStatus").textContent = "Call from " + data.name;
           document.getElementById("acceptBtn").style.display = "block";
         }
       });
     });
 
-    // --- VIDEO CALL ENGINE ---
+    // --- VIDEO ENGINE ---
     async function startMedia() {
       localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       document.getElementById("localVideo").srcObject = localStream;
@@ -118,7 +131,6 @@
     window.startCall = async (targetUid) => {
       document.getElementById("callOverlay").style.display = "flex";
       document.getElementById("callStatus").textContent = "Calling...";
-      document.getElementById("acceptBtn").style.display = "none";
       await startMedia();
 
       pc = new RTCPeerConnection(servers);
@@ -131,13 +143,15 @@
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
+      set(ref(database, `calls/${targetUid}`), { 
+          offer: { type: offer.type, sdp: offer.sdp }, 
+          name: currentUsername, 
+          from: currentUser.uid 
+      });
 
-      const callRef = ref(database, `calls/${targetUid}`);
-      set(callRef, { offer: { type: offer.type, sdp: offer.sdp }, name: currentUsername, from: currentUser.uid });
-
-      onValue(callRef, async (s) => {
+      onValue(ref(database, `calls/${targetUid}`), async (s) => {
         const data = s.val();
-        if (data?.answer && pc && pc.signalingState === "have-local-offer") {
+        if (data?.answer && pc) {
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
           document.getElementById("callStatus").textContent = "Connected";
         }
@@ -157,13 +171,8 @@
       await pc.setRemoteDescription(new RTCSessionDescription(window.incomingCallData.offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-
       update(ref(database, `calls/${currentUser.uid}`), { answer: { type: answer.type, sdp: answer.sdp } });
       
-      onChildAdded(ref(database, `calls/${currentUser.uid}/candidates`), (s) => {
-        if(pc && s.val()) pc.addIceCandidate(new RTCIceCandidate(s.val())).catch(e => {});
-      });
-
       document.getElementById("callStatus").textContent = "Connected";
       document.getElementById("acceptBtn").style.display = "none";
     };
@@ -175,7 +184,6 @@
       document.getElementById("callOverlay").style.display = "none";
     };
 
-    // --- UI TOOLS ---
     window.toggleList = () => document.getElementById("memberList").classList.toggle("open");
     
     onValue(ref(database, 'online'), (s) => {
@@ -186,10 +194,13 @@
         if(uid === currentUser.uid) return;
         const div = document.createElement("div");
         div.className = "user-item";
-        div.innerHTML = `<span>${users[uid].name}</span> <button class="call-btn" onclick="startCall('${uid}')">📞 Call</button>`;
+        div.innerHTML = `<span>${users[uid].name}</span> <button class="call-btn-small" onclick="startCall('${uid}')">📞</button>`;
         cont.appendChild(div);
       });
     });
   </script>
+  
+  <script src="particles.js"></script>
+  <script type="module" src="auth.js"></script>
 </body>
 </html>
