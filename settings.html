@@ -6,8 +6,7 @@
   <title>Nexus - Settings</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    /* REMOVED: body { background: #0f0f0f; } - Let style.css handle it! */
-    
+    /* We removed the hardcoded dark background here so style.css can control it */
     .settings-page {
       max-width: 700px;
       margin: 100px auto 40px;
@@ -21,7 +20,19 @@
       border-radius: 15px;
       padding: 25px;
       margin-bottom: 25px;
-      transition: background 0.3s, border 0.3s;
+      transition: all 0.3s ease;
+    }
+
+    /* Light mode specific section styling */
+    .settings-section {
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid #ddd;
+    }
+
+    /* Dark mode override for section styling */
+    body.dark-mode .settings-section {
+      background: rgba(30, 30, 30, 0.6);
+      border: 1px solid #333;
     }
 
     .settings-item {
@@ -33,10 +44,7 @@
     }
 
     .settings-item:last-child { border-bottom: none; }
-
     .settings-label { color: #888; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
-    
-    /* Ensure text color adapts */
     .settings-value { font-size: 16px; margin-top: 5px; }
 
     .reveal-link { color: #4285f4; cursor: pointer; font-size: 13px; text-decoration: underline; margin-left: 10px; }
@@ -98,6 +106,14 @@
         </div>
         <button class="edit-btn" id="editUserBtn">Edit</button>
       </div>
+
+      <div class="settings-item">
+        <div>
+          <div class="settings-label">Password</div>
+          <div class="settings-value">••••••••</div>
+        </div>
+        <button class="edit-btn" id="changePassBtn">Change</button>
+      </div>
     </div>
 
     <div class="settings-section">
@@ -114,7 +130,15 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { getDatabase, ref, get, update, child } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-    // ... (Keep your firebaseConfig here) ...
+    const firebaseConfig = {
+      apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
+      authDomain: "chat-or-somethig.firebaseapp.com",
+      databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
+      projectId: "chat-or-somethig",
+      storageBucket: "chat-or-somethig.firebasestorage.app",
+      messagingSenderId: "598777875087",
+      appId: "1:598777875087:web:d100536dd269bc0a9d7efa"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -133,6 +157,7 @@
       storedEmail = data.email || user.email;
       const username = data.username || "User";
       
+      // Save to localStorage so global.js can update the top-right header
       localStorage.setItem('userName', username);
       document.getElementById('usernameDisplay').textContent = username;
       
@@ -143,7 +168,6 @@
       }
     });
 
-    // ADDED THIS FUNCTION: It was missing in your snippet!
     function updateUIAppearance(mode) {
       const body = document.body;
       if (mode === 'dark') {
@@ -174,7 +198,7 @@
         location.reload();
       }
     };
-    
+
     document.getElementById('emailRevealBtn').onclick = () => {
       const display = document.getElementById('emailDisplay');
       display.textContent = display.textContent.includes('*') ? storedEmail : "********@gmail.com";
