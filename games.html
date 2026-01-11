@@ -28,14 +28,19 @@
     .game-card:hover { transform: translateY(-4px); box-shadow: 0 8px 15px rgba(0,0,0,0.3); }
     .game-card.pinned { background: linear-gradient(135deg, #ffd700 0%, #ffb900 100%); box-shadow: 0 4px 0 #b8860b; }
     
+    /* Pin Button for Admins */
+    .pin-btn { position: absolute; top: -10px; right: -10px; background: #4285f4; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 5; }
+    .game-card:hover .pin-btn { display: flex; }
+
     /* --- Game View & Floating Chat --- */
     #gameView { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: black; z-index: 3000; }
     #gameIframe { width: 100%; height: 100%; border: none; }
     .close-btn { position: absolute; top: 15px; right: 20px; background: #ea4335; color: white; border: none; padding: 12px 24px; cursor: pointer; font-weight: bold; z-index: 3100; border-radius: 50px; }
 
     #chatWidget { position: absolute; top: 80px; left: 20px; width: 350px; height: 500px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; z-index: 3050; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.8); }
-    #chatHeader { padding: 12px; background: #4285f4; cursor: move; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; color: white; }
+    #chatHeader { padding: 12px; background: #4285f4; cursor: move; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; color: white; user-select: none; }
     #chatShim { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3055; }
+    #chatResizer { width: 30px; height: 30px; position: absolute; right: 0; bottom: 0; cursor: nwse-resize; z-index: 3060; }
     
     /* Options Modal */
     #optionsMenu { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 4000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
@@ -43,8 +48,9 @@
     .option-input { width: 100%; padding: 12px; margin: 10px 0 20px; background: #000; border: 1px solid #333; color: white; border-radius: 8px; }
   </style>
 </head>
-<body class="dark-mode"> <canvas id="particleCanvas"></canvas>
+<body class="dark-mode">
 
+  <canvas id="particleCanvas"></canvas>
   <script src="global.js"></script>
 
   <div id="optionsMenu">
@@ -72,14 +78,17 @@
 
   <div id="gameView">
     <button class="close-btn" onclick="closeGame()">✕ Exit Game</button>
+    
     <div id="chatWidget">
-        <div id="chatHeader">
+        <div id="chatHeader" id="chatHeader">
             <span style="font-size:12px; font-weight:bold;">Nexus Live Chat</span>
             <button onclick="toggleChat()" style="background:none; border:none; color:white; cursor:pointer;">—</button>
         </div>
         <iframe id="chatIframe" src="chat.html" style="flex:1; border:none; background:white;"></iframe>
         <div id="chatShim"></div>
+        <div id="chatResizer"></div>
     </div>
+    
     <iframe id="gameIframe" src=""></iframe>
   </div>
 
@@ -102,23 +111,23 @@
     const auth = getAuth(app);
     const database = getDatabase(app);
 
-    // Sync Username and Pinned Games
     onAuthStateChanged(auth, async user => {
       if (user) {
         const snap = await get(child(ref(database), `users/${user.uid}`));
         if (snap.exists()) {
           const data = snap.val();
           window.isAdmin = data.isAdmin === true;
-          // Sync to global header elements
+          
+          // Sync Sidebar Avatar and Username
           const userInit = document.getElementById('userInitial');
           if(userInit) userInit.textContent = data.username[0].toUpperCase();
           
-          // Add text username next to avatar
           const userInfo = document.querySelector('.user-info');
-          if(!document.getElementById('displayUser')) {
-            userInfo.insertAdjacentHTML('afterbegin', `<span id="displayUser" style="margin-right:10px; font-weight:500;">${data.username}</span>`);
+          if(userInfo && !document.getElementById('displayUser')) {
+            userInfo.insertAdjacentHTML('afterbegin', `<span id="displayUser" style="margin-right:10px; font-weight:500; color:#4285f4;">${data.username}</span>`);
           }
         }
+        // Sync Pinned Games
         onValue(ref(database, 'pinnedGames'), (s) => {
           window.pinnedLabels = s.val() || [];
           if(window.allGames.length) renderGames(window.allGames);
@@ -136,9 +145,8 @@
   </script>
 
   <script>
-    // Integration logic for global.js
+    /* --- Layout Integration --- */
     document.addEventListener('DOMContentLoaded', () => {
-        // Add "Options" button to the sidebar injected by global.js
         const navItems = document.querySelector('.nav-items');
         if (navItems) {
             const optBtn = document.createElement('a');
@@ -150,7 +158,7 @@
         }
     });
 
-    /* --- Game Logic --- */
+    /* --- Panic & Settings --- */
     let panicKey = localStorage.getItem('pKey') || '`';
     let panicUrl = localStorage.getItem('pUrl') || 'https://classroom.google.com';
     window.allGames = [];
@@ -173,12 +181,13 @@
       toggleOptions();
     }
 
+    /* --- Game Management --- */
     async function loadGames() {
       try {
         const r = await fetch('games.json');
         window.allGames = await r.json();
         renderGames(window.allGames);
-      } catch (e) { console.error("Missing games.json"); }
+      } catch (e) { console.error("games.json not found"); }
     }
 
     function renderGames(list) {
@@ -200,6 +209,14 @@
       btn.className = 'game-card' + (isPinned ? ' pinned' : '');
       btn.innerText = game.label.replace(/^cl/i, '');
       
+      // Admin Pin Button
+      if (window.isAdmin) {
+        const pBtn = document.createElement('button');
+        pBtn.className = 'pin-btn'; pBtn.innerHTML = isPinned ? '✕' : '📌';
+        pBtn.onclick = (e) => { e.stopPropagation(); window.togglePin(game.label); };
+        btn.appendChild(pBtn);
+      }
+      
       btn.onclick = () => {
         document.getElementById('gameIframe').src = game.path;
         document.getElementById('gameView').style.display = 'block';
@@ -214,9 +231,39 @@
         document.getElementById('gameView').style.display = 'none'; 
         document.body.style.overflow = 'auto'; 
     }
+
+    /* --- DRAG & RESIZE LOGIC --- */
+    const widget = document.getElementById("chatWidget"), header = document.getElementById("chatHeader");
+    const resizer = document.getElementById("chatResizer"), shim = document.getElementById("chatShim");
+
+    header.onmousedown = (e) => {
+        if(e.target.tagName === 'BUTTON') return;
+        shim.style.display = "block"; // Prevents iframe from stealing focus
+        let ox = e.clientX - widget.offsetLeft, oy = e.clientY - widget.offsetTop;
+        const move = (m) => { widget.style.left = (m.clientX - ox) + "px"; widget.style.top = (m.clientY - oy) + "px"; };
+        const stop = () => { shim.style.display = "none"; document.removeEventListener('mousemove', move); };
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', stop, {once:true});
+    };
+
+    resizer.onmousedown = (e) => {
+        shim.style.display = "block";
+        let sw = widget.offsetWidth, sh = widget.offsetHeight, sx = e.clientX, sy = e.clientY;
+        const move = (m) => {
+            const nw = sw + (m.clientX - sx), nh = sh + (m.clientY - sy);
+            if(nw > 200) widget.style.width = nw + "px";
+            if(nh > 100) widget.style.height = nh + "px";
+        };
+        const stop = () => { shim.style.display = "none"; document.removeEventListener('mousemove', move); };
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', stop, {once:true});
+    };
+
     function toggleChat() {
         const chat = document.getElementById('chatIframe');
-        chat.style.display = chat.style.display === 'none' ? 'block' : 'none';
+        const isHidden = chat.style.display === 'none';
+        chat.style.display = isHidden ? 'block' : 'none';
+        widget.style.height = isHidden ? '500px' : '45px';
     }
 
     loadGames();
