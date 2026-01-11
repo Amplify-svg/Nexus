@@ -20,8 +20,13 @@
     .sidebar.open { left: 0; }
     .sidebar-header { padding: 20px; background: #4285f4; color: white; font-size: 24px; font-weight: bold; }
     .nav-items { flex: 1; padding: 20px 0; }
-    .nav-item { padding: 15px 25px; cursor: pointer; transition: background 0.2s; font-size: 18px; color: #333; }
+    .nav-item { padding: 15px 25px; cursor: pointer; transition: background 0.2s; font-size: 18px; color: #333; display: flex; align-items: center; gap: 10px; }
     .nav-item:hover { background: #f5f5f5; }
+    
+    /* Special styling for the Proxy button */
+    .nav-item.proxy-link { color: #4285f4; font-weight: bold; border-left: 4px solid #4285f4; }
+    body.dark-mode .nav-item.proxy-link { color: #8ab4f8; border-color: #8ab4f8; }
+
     .sidebar-footer { padding: 20px; border-top: 1px solid #ddd; }
     .footer-btn { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
     .settings-btn { background: #666; color: white; }
@@ -65,6 +70,7 @@
     <div class="sidebar-header">Menu</div>
     <div class="nav-items">
       <div class="nav-item" onclick="window.location.href = 'index.html'">🏠 Home</div>
+      <div class="nav-item proxy-link" onclick="window.location.href = 'chatty.html'">🌐 Proxy</div>
       <div class="nav-item" onclick="window.location.href = 'chat.html'">💬 Chat</div>
       <div class="nav-item" onclick="window.location.href = 'games.html'">🎮 Games</div>
     </div>
@@ -91,7 +97,7 @@
       <div class="auth-box">
         <h2>Welcome!</h2>
         <div id="status"></div>
-        <p>Use the sidebar to explore games and chat.</p>
+        <p>Use the sidebar to explore games, the proxy, and chat.</p>
       </div>
     </div>
   </div>
@@ -120,7 +126,6 @@
     const content = document.getElementById("content");
     const status = document.getElementById("status");
 
-    // Sidebar Logic
     window.toggleSidebar = () => {
       document.getElementById("sidebar").classList.toggle("open");
       document.getElementById("overlay").classList.toggle("active");
@@ -145,7 +150,7 @@
     };
 
     window.logout = () => {
-      signOut(auth).then(() => { if (sidebar.classList.contains("open")) toggleSidebar(); });
+      signOut(auth).then(() => { if (document.getElementById("sidebar").classList.contains("open")) toggleSidebar(); });
     };
 
     onAuthStateChanged(auth, async user => {
@@ -171,43 +176,20 @@
   </script>
 
   <script>
-    /* --- Particle Background & Interaction Logic --- */
     const canvas = document.getElementById('particleCanvas');
     const ctx = canvas.getContext('2d');
-    
-    // Mouse interaction object
-    let mouse = {
-        x: null,
-        y: null,
-        radius: 120 // Radius of interaction
-    };
+    let mouse = { x: null, y: null, radius: 120 };
 
-    // Track Mouse Position
-    window.addEventListener('mousemove', (event) => {
-        mouse.x = event.x;
-        mouse.y = event.y;
-    });
+    window.addEventListener('mousemove', (event) => { mouse.x = event.x; mouse.y = event.y; });
+    window.addEventListener('touchmove', (event) => { mouse.x = event.touches[0].clientX; mouse.y = event.touches[0].clientY; });
+    window.addEventListener('mouseout', () => { mouse.x = undefined; mouse.y = undefined; });
 
-    // Track Touch Position (Mobile)
-    window.addEventListener('touchmove', (event) => {
-        mouse.x = event.touches[0].clientX;
-        mouse.y = event.touches[0].clientY;
-    });
-
-    // Reset interaction when mouse leaves window
-    window.addEventListener('mouseout', () => {
-        mouse.x = undefined;
-        mouse.y = undefined;
-    });
-
-    // Haptic Feedback Helper (Debounced to prevent constant buzzing)
     let lastVibrate = 0;
     function triggerHaptic() {
         if (!navigator.vibrate) return;
         const now = Date.now();
-        // Limit vibration to once every 50ms to create a texture feel rather than a continuous buzz
         if (now - lastVibrate > 50) {
-            navigator.vibrate(5); // Very short 5ms vibration
+            navigator.vibrate(5);
             lastVibrate = now;
         }
     }
@@ -222,46 +204,29 @@
         this.vx = (Math.random() - 0.5) * 0.4; 
         this.vy = (Math.random() - 0.5) * 0.4;
         this.size = 2;
-        // Store original density to help return to normal speed
         this.baseX = this.x;
         this.baseY = this.y;
         this.density = (Math.random() * 30) + 1; 
       }
 
       update() {
-        // --- 1. Basic Movement ---
         this.x += this.vx;
         this.y += this.vy;
-
-        // --- 2. Mouse Interaction & Haptics ---
         if (mouse.x != undefined && mouse.y != undefined) {
             let dx = mouse.x - this.x;
             let dy = mouse.y - this.y;
             let distance = Math.sqrt(dx * dx + dy * dy);
-
-            // If mouse is close to particle
             if (distance < mouse.radius) {
-                // Haptic: If very close, trigger vibration
-                if (distance < mouse.radius - 20) {
-                    triggerHaptic();
-                }
-
-                // Physics: Push particle away
+                if (distance < mouse.radius - 20) triggerHaptic();
                 const forceDirectionX = dx / distance;
                 const forceDirectionY = dy / distance;
-                const maxDistance = mouse.radius;
-                // Force increases as you get closer
-                const force = (maxDistance - distance) / maxDistance;
-                
+                const force = (mouse.radius - distance) / mouse.radius;
                 const directionX = forceDirectionX * force * this.density;
                 const directionY = forceDirectionY * force * this.density;
-
                 this.x -= directionX;
                 this.y -= directionY;
             }
         }
-
-        // --- 3. Screen Edge Bouncing ---
         if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
         if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
       }
@@ -276,13 +241,10 @@
       
       particles.forEach((p, i) => {
         p.update();
-        
         ctx.fillStyle = `rgba(${color}, 0.5)`; 
         ctx.beginPath(); 
         ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); 
         ctx.fill();
-
-        // Draw Lines
         for (let j = i + 1; j < particles.length; j++) {
           const dx = p.x - particles[j].x, dy = p.y - particles[j].y;
           const dist = Math.sqrt(dx*dx + dy*dy);
