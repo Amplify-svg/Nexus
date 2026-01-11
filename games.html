@@ -89,7 +89,7 @@
 
   <div class="sidebar" id="sidebar">
     <div style="padding:25px; font-weight:bold; font-size: 20px; color: #4285f4; border-bottom: 1px solid #333;">Nexus Menu</div>
-    <div class="nav-item" onclick="location.href='index.html'">🏠 Home</div>
+    <div class="nav-item" onclick="location.href='cat.html'">🏠 Home</div>
     <div class="nav-item" onclick="location.href='chat.html'">💬 Chat</div>
     <div class="nav-item" onclick="location.href='call.html'">📞 Call</div>
     <div class="nav-item" onclick="toggleOptions()">⚙️ Options</div>
@@ -176,7 +176,7 @@
           window.pinnedLabels = s.val() || [];
           if(window.allGames.length) renderGames(window.allGames);
         });
-      } else { window.location.href = 'index.html'; }
+      } else { window.location.href = 'cat.html'; }
     });
 
     window.togglePin = async (label) => {
@@ -187,7 +187,7 @@
       await set(ref(database, 'pinnedGames'), pins);
     };
 
-    window.handleLogout = () => signOut(auth).then(() => location.href='index.html');
+    window.handleLogout = () => signOut(auth).then(() => location.href='cat.html');
   </script>
 
   <script>
