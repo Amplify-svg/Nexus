@@ -2,7 +2,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebas
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-// Your Firebase Config (Matches your chat config)
 const firebaseConfig = {
     apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
     authDomain: "chat-or-somethig.firebaseapp.com",
@@ -17,42 +16,39 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
 
-// Logic to load Username in Top Right
+// Handle Username Display safely
 onAuthStateChanged(auth, (user) => {
     const navName = document.getElementById('navUsername');
-    
+    if (!navName) return; // Exit if the element doesn't exist on this page
+
     if (user) {
-        // Listen to the specific user node for the custom username
         const userRef = ref(database, `users/${user.uid}`);
         onValue(userRef, (snapshot) => {
             const data = snapshot.val();
-            if (data && data.username) {
-                if (navName) navName.textContent = data.username;
-            } else {
-                // Fallback to email if username isn't set yet
-                if (navName) navName.textContent = user.email.split('@')[0];
-            }
+            navName.textContent = (data && data.username) ? data.username : user.email.split('@')[0];
         });
     } else {
-        if (navName) navName.textContent = "Guest";
+        navName.textContent = "Guest";
     }
 });
 
-// Particle System Initialization (Shared across pages)
-const canvas = document.getElementById('particleCanvas');
-if (canvas) {
+// Particles System
+function startParticles() {
+    const canvas = document.getElementById('particleCanvas');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    
+    let particlesArray = [];
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    let particlesArray = [];
     class Particle {
         constructor() {
             this.x = Math.random() * canvas.width;
             this.y = Math.random() * canvas.height;
             this.size = Math.random() * 2 + 1;
-            this.speedX = Math.random() * 1 - 0.5;
-            this.speedY = Math.random() * 1 - 0.5;
+            this.speedX = Math.random() * 0.5 - 0.25;
+            this.speedY = Math.random() * 0.5 - 0.25;
         }
         update() {
             this.x += this.speedX;
@@ -63,7 +59,7 @@ if (canvas) {
             if (this.y < 0) this.y = canvas.height;
         }
         draw() {
-            ctx.fillStyle = 'rgba(66, 133, 244, 0.5)';
+            ctx.fillStyle = 'rgba(66, 133, 244, 0.3)';
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
             ctx.fill();
@@ -72,7 +68,7 @@ if (canvas) {
 
     function init() {
         particlesArray = [];
-        for (let i = 0; i < 100; i++) { particlesArray.push(new Particle()); }
+        for (let i = 0; i < 80; i++) particlesArray.push(new Particle());
     }
 
     function animate() {
@@ -81,12 +77,18 @@ if (canvas) {
         requestAnimationFrame(animate);
     }
 
+    init();
+    animate();
     window.addEventListener('resize', () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         init();
     });
+}
 
-    init();
-    animate();
+// Run particles when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startParticles);
+} else {
+    startParticles();
 }
