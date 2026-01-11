@@ -1,6 +1,6 @@
 // global.js
+// global.js update
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Inject the Sidebar and Header HTML
     const navHTML = `
         <div class="header" id="header" style="display: none;">
             <div class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></div>
@@ -14,8 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="sidebar-header">Menu</div>
             <div class="nav-items">
                 <div class="nav-item" onclick="window.location.href = 'Home.html'">🏠 Home</div>
-                <div class="nav-item proxy-link" onclick="window.location.href = 'chatty.html'">🌐 Proxy</div>
+                <div class="nav-item proxy-link" onclick="window.location.href = 'math.html'">🌐 Research Portal</div>
                 <div class="nav-item" onclick="window.location.href = 'chat.html'">💬 Chat</div>
+                <div class="nav-item" onclick="window.location.href = 'call.html'">📞 Video Call</div>
                 <div class="nav-item" onclick="window.location.href = 'games.html'">🎮 Games</div>
             </div>
             <div class="sidebar-footer">
