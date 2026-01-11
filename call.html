@@ -14,16 +14,16 @@
       background: rgba(0,0,0,0.95); z-index: 2000; 
       flex-direction: column; align-items: center; justify-content: center; 
     }
-    .video-grid { display: flex; gap: 15px; width: 90%; max-width: 1200px; height: 60vh; position: relative; }
-    #remoteVideo { flex: 1; background: #000; border-radius: 15px; object-fit: cover; }
+    .video-grid { display: flex; gap: 15px; width: 90%; max-width: 1200px; height: 65vh; position: relative; margin-top: 20px; }
+    #remoteVideo { flex: 1; background: #000; border-radius: 15px; object-fit: cover; border: 1px solid #333; }
     #localVideo { 
-      position: absolute; width: 200px; height: 150px; 
+      position: absolute; width: 220px; height: 165px; 
       bottom: 20px; right: 20px; border: 3px solid #4285f4; 
       border-radius: 12px; object-fit: cover; transform: scaleX(-1); 
       box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
     }
     .controls { margin-top: 30px; display: flex; gap: 20px; }
-    .btn-call { width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer; font-size: 24px; transition: 0.2s; }
+    .btn-call { width: 65px; height: 65px; border-radius: 50%; border: none; cursor: pointer; font-size: 28px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
     .btn-call:hover { transform: scale(1.1); }
     
     #memberList { 
@@ -36,12 +36,11 @@
       display: flex; justify-content: space-between; align-items: center; 
       padding: 12px; margin-bottom: 10px; background: #2a2a2a; border-radius: 10px; 
     }
-    .call-btn-small { background: #4285f4; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; }
+    .call-btn-small { background: #4285f4; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; }
 
-    /* Button to trigger the member list */
     .toggle-members {
         position: fixed; top: 75px; right: 20px; z-index: 101;
-        background: #4285f4; color: white; padding: 10px 20px; border-radius: 5px;
+        background: #4285f4; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
   </style>
 </head>
@@ -52,12 +51,12 @@
   <button class="toggle-members" onclick="toggleList()">👥 Online Users</button>
 
   <div id="memberList">
-    <h3 style="margin-bottom: 20px;">Available Peers</h3>
+    <h3 style="margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 10px;">Peers Online</h3>
     <div id="onlineUsers"></div>
   </div>
 
   <div id="callOverlay">
-    <h2 id="callStatus" style="margin-bottom: 20px;">Connecting...</h2>
+    <h2 id="callStatus" style="margin-bottom: 10px; font-weight: 300; letter-spacing: 1px;">Connecting...</h2>
     <div class="video-grid">
       <video id="remoteVideo" autoplay playsinline></video>
       <video id="localVideo" autoplay playsinline muted></video>
@@ -69,12 +68,14 @@
   </div>
 
   <script src="global.js"></script>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getDatabase, ref, push, set, onValue, remove, update, onChildAdded } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { 
+      getDatabase, ref, push, set, onValue, remove, update, onChildAdded, onDisconnect 
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-    // Re-use your config
     const firebaseConfig = {
       apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
       authDomain: "chat-or-somethig.firebaseapp.com",
@@ -99,33 +100,36 @@
       ]
     };
 
-    // Sync with your Auth logic
     onAuthStateChanged(auth, (user) => {
-      if (!user) { location.href = 'Home.html'; return; }
+      if (!user) { window.location.href = 'Home.html'; return; }
       currentUser = user;
       currentUsername = user.email.split('@')[0];
       
-      // Mark as online specifically for calling
-      set(ref(database, `online/${user.uid}`), { name: currentUsername });
+      const myPresenceRef = ref(database, `online/${user.uid}`);
+      set(myPresenceRef, { name: currentUsername, uid: user.uid });
       
-      // Cleanup when closing tab
-      onDisconnect(ref(database, `online/${user.uid}`)).remove();
+      // Fixed: onDisconnect now correctly imported
+      onDisconnect(myPresenceRef).remove();
 
+      // Monitor for incoming calls
       onValue(ref(database, `calls/${user.uid}`), (snap) => {
         const data = snap.val();
         if (data && data.offer && !pc) {
           window.incomingCallData = data;
           document.getElementById("callOverlay").style.display = "flex";
-          document.getElementById("callStatus").textContent = "Call from " + data.name;
+          document.getElementById("callStatus").textContent = "Incoming Call: " + data.name;
           document.getElementById("acceptBtn").style.display = "block";
         }
       });
     });
 
-    // --- VIDEO ENGINE ---
     async function startMedia() {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      document.getElementById("localVideo").srcObject = localStream;
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById("localVideo").srcObject = localStream;
+      } catch (e) {
+        alert("Camera access denied or not found.");
+      }
     }
 
     window.startCall = async (targetUid) => {
@@ -135,7 +139,10 @@
 
       pc = new RTCPeerConnection(servers);
       localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-      pc.ontrack = (e) => document.getElementById("remoteVideo").srcObject = e.streams[0];
+      
+      pc.ontrack = (e) => {
+        document.getElementById("remoteVideo").srcObject = e.streams[0];
+      };
       
       pc.onicecandidate = (e) => {
         if(e.candidate) push(ref(database, `calls/${targetUid}/candidates`), e.candidate.toJSON());
@@ -143,17 +150,19 @@
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      set(ref(database, `calls/${targetUid}`), { 
+      
+      const callRef = ref(database, `calls/${targetUid}`);
+      await set(callRef, { 
           offer: { type: offer.type, sdp: offer.sdp }, 
           name: currentUsername, 
           from: currentUser.uid 
       });
 
-      onValue(ref(database, `calls/${targetUid}`), async (s) => {
+      onValue(callRef, async (s) => {
         const data = s.val();
-        if (data?.answer && pc) {
+        if (data?.answer && pc && pc.signalingState === "have-local-offer") {
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-          document.getElementById("callStatus").textContent = "Connected";
+          document.getElementById("callStatus").textContent = "Live Session";
         }
       });
     };
@@ -162,7 +171,10 @@
       await startMedia();
       pc = new RTCPeerConnection(servers);
       localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-      pc.ontrack = (e) => document.getElementById("remoteVideo").srcObject = e.streams[0];
+      
+      pc.ontrack = (e) => {
+        document.getElementById("remoteVideo").srcObject = e.streams[0];
+      };
 
       pc.onicecandidate = (e) => {
         if(e.candidate) push(ref(database, `calls/${window.incomingCallData.from}/candidates`), e.candidate.toJSON());
@@ -171,30 +183,44 @@
       await pc.setRemoteDescription(new RTCSessionDescription(window.incomingCallData.offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      update(ref(database, `calls/${currentUser.uid}`), { answer: { type: answer.type, sdp: answer.sdp } });
       
-      document.getElementById("callStatus").textContent = "Connected";
+      update(ref(database, `calls/${currentUser.uid}`), { 
+        answer: { type: answer.type, sdp: answer.sdp } 
+      });
+
+      // Handle ICE candidates for the receiver
+      onChildAdded(ref(database, `calls/${currentUser.uid}/candidates`), (s) => {
+        if (pc && s.val()) {
+          pc.addIceCandidate(new RTCIceCandidate(s.val())).catch(e => {});
+        }
+      });
+      
+      document.getElementById("callStatus").textContent = "Live Session";
       document.getElementById("acceptBtn").style.display = "none";
     };
 
     window.hangUp = () => {
       if(localStream) localStream.getTracks().forEach(t => t.stop());
       if(pc) { pc.close(); pc = null; }
-      remove(ref(database, `calls/${currentUser.uid}`));
+      if(currentUser) remove(ref(database, `calls/${currentUser.uid}`));
       document.getElementById("callOverlay").style.display = "none";
     };
 
     window.toggleList = () => document.getElementById("memberList").classList.toggle("open");
     
+    // Online User List Updater
     onValue(ref(database, 'online'), (s) => {
       const users = s.val() || {};
       const cont = document.getElementById("onlineUsers");
       cont.innerHTML = "";
       Object.keys(users).forEach(uid => {
-        if(uid === currentUser.uid) return;
+        if(currentUser && uid === currentUser.uid) return;
         const div = document.createElement("div");
         div.className = "user-item";
-        div.innerHTML = `<span>${users[uid].name}</span> <button class="call-btn-small" onclick="startCall('${uid}')">📞</button>`;
+        div.innerHTML = `
+            <span>${users[uid].name}</span> 
+            <button class="call-btn-small" onclick="startCall('${uid}')">📞</button>
+        `;
         cont.appendChild(div);
       });
     });
