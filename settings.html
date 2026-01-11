@@ -6,7 +6,7 @@
   <title>Nexus - Settings</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    body { background: #0f0f0f; color: white; min-height: 100vh; }
+    /* REMOVED: body { background: #0f0f0f; } - Let style.css handle it! */
     
     .settings-page {
       max-width: 700px;
@@ -17,12 +17,11 @@
     }
 
     .settings-section {
-      background: rgba(30, 30, 30, 0.6);
       backdrop-filter: blur(10px);
-      border: 1px solid #333;
       border-radius: 15px;
       padding: 25px;
       margin-bottom: 25px;
+      transition: background 0.3s, border 0.3s;
     }
 
     .settings-item {
@@ -30,34 +29,35 @@
       justify-content: space-between;
       align-items: center;
       padding: 15px 0;
-      border-bottom: 1px solid #444;
+      border-bottom: 1px solid rgba(128, 128, 128, 0.2);
     }
 
     .settings-item:last-child { border-bottom: none; }
 
     .settings-label { color: #888; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
-    .settings-value { color: white; font-size: 16px; margin-top: 5px; }
+    
+    /* Ensure text color adapts */
+    .settings-value { font-size: 16px; margin-top: 5px; }
 
     .reveal-link { color: #4285f4; cursor: pointer; font-size: 13px; text-decoration: underline; margin-left: 10px; }
 
-    /* Updated Buttons */
     .edit-btn {
-      background: #2a2a2a;
-      color: white;
+      background: rgba(128, 128, 128, 0.1);
+      color: inherit;
       padding: 8px 16px;
       border-radius: 6px;
-      border: 1px solid #444;
+      border: 1px solid rgba(128, 128, 128, 0.3);
       cursor: pointer;
       transition: 0.2s;
     }
-    .edit-btn:hover { background: #4285f4; border-color: #4285f4; }
+    .edit-btn:hover { background: #4285f4; color: white; border-color: #4285f4; }
 
     .appearance-toggle { display: flex; gap: 10px; margin-top: 15px; }
     .toggle-option {
       flex: 1;
       padding: 12px;
-      background: #222;
-      border: 1px solid #444;
+      background: rgba(128, 128, 128, 0.1);
+      border: 1px solid rgba(128, 128, 128, 0.3);
       color: #888;
       border-radius: 8px;
       cursor: pointer;
@@ -67,7 +67,7 @@
     .toggle-option.active {
       background: rgba(66, 133, 244, 0.2);
       border-color: #4285f4;
-      color: white;
+      color: #4285f4;
     }
   </style>
 </head>
@@ -98,14 +98,6 @@
         </div>
         <button class="edit-btn" id="editUserBtn">Edit</button>
       </div>
-
-      <div class="settings-item">
-        <div>
-          <div class="settings-label">Password</div>
-          <div class="settings-value">••••••••</div>
-        </div>
-        <button class="edit-btn" id="changePassBtn">Change</button>
-      </div>
     </div>
 
     <div class="settings-section">
@@ -119,18 +111,10 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, updateEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { getDatabase, ref, get, update, child } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
-      authDomain: "chat-or-somethig.firebaseapp.com",
-      databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
-      projectId: "chat-or-somethig",
-      storageBucket: "chat-or-somethig.firebasestorage.app",
-      messagingSenderId: "598777875087",
-      appId: "1:598777875087:web:d100536dd269bc0a9d7efa"
-    };
+    // ... (Keep your firebaseConfig here) ...
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -142,18 +126,35 @@
     onAuthStateChanged(auth, async user => {
       if (!user) window.location.href = "Home.html";
       currentUser = user;
+      
       const snap = await get(child(ref(database), `users/${user.uid}`));
       const data = snap.val() || {};
+      
       storedEmail = data.email || user.email;
-      document.getElementById('usernameDisplay').textContent = data.username || "User";
-      if (data.appearance === "dark") updateUIAppearance("dark");
+      const username = data.username || "User";
+      
+      localStorage.setItem('userName', username);
+      document.getElementById('usernameDisplay').textContent = username;
+      
+      if (data.appearance === "dark") {
+          updateUIAppearance("dark");
+      } else {
+          updateUIAppearance("light");
+      }
     });
 
-    // Toggle Appearance
+    // ADDED THIS FUNCTION: It was missing in your snippet!
     function updateUIAppearance(mode) {
-      document.body.classList.toggle("dark-mode", mode === "dark");
-      document.getElementById('lightMode').classList.toggle("active", mode === "light");
-      document.getElementById('darkMode').classList.toggle("active", mode === "dark");
+      const body = document.body;
+      if (mode === 'dark') {
+        body.classList.add('dark-mode');
+        document.getElementById('darkMode').classList.add('active');
+        document.getElementById('lightMode').classList.remove('active');
+      } else {
+        body.classList.remove('dark-mode');
+        document.getElementById('lightMode').classList.add('active');
+        document.getElementById('darkMode').classList.remove('active');
+      }
     }
 
     document.getElementById('lightMode').onclick = () => saveAppearance('light');
@@ -161,20 +162,22 @@
 
     async function saveAppearance(mode) {
       updateUIAppearance(mode);
+      localStorage.setItem('theme', mode); 
       if (currentUser) await update(ref(database, `users/${currentUser.uid}`), { appearance: mode });
     }
-
-    document.getElementById('emailRevealBtn').onclick = () => {
-      const display = document.getElementById('emailDisplay');
-      display.textContent = display.textContent.includes('*') ? storedEmail : "********@gmail.com";
-    };
 
     document.getElementById('editUserBtn').onclick = async () => {
       const name = prompt("New username:");
       if (name) {
         await update(ref(database, `users/${currentUser.uid}`), { username: name });
+        localStorage.setItem('userName', name); 
         location.reload();
       }
+    };
+    
+    document.getElementById('emailRevealBtn').onclick = () => {
+      const display = document.getElementById('emailDisplay');
+      display.textContent = display.textContent.includes('*') ? storedEmail : "********@gmail.com";
     };
   </script>
   <script src="particles.js"></script>
