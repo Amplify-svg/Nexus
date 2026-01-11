@@ -8,8 +8,18 @@ window.addEventListener('touchmove', (e) => { mouse.x = e.touches[0].clientX; mo
 window.addEventListener('mouseout', () => { mouse.x = undefined; mouse.y = undefined; });
 
 let lastVibrate = 0;
+// particles.js update
+let userInteracted = false;
+
+// Listen for the first click/tap to "unlock" vibrations
+window.addEventListener('click', () => {
+    userInteracted = true;
+}, { once: true }); // 'once' makes sure this only runs the very first time
+
 function triggerHaptic() {
-    if (!navigator.vibrate) return;
+    // Only vibrate if the browser supports it AND the user has clicked something
+    if (!navigator.vibrate || !userInteracted) return;
+
     const now = Date.now();
     if (now - lastVibrate > 50) {
         navigator.vibrate(5);
