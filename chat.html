@@ -3,132 +3,220 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nexus - Global Chat</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Chat</title>
   <style>
-    /* Chat-specific UI Styling */
-    body { background: #0f0f0f; color: white; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     
-    #chatContainer {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      max-width: 900px;
-      width: 95%;
-      margin: 80px auto 20px auto;
-      background: rgba(25, 25, 25, 0.8);
-      backdrop-filter: blur(15px);
-      border: 1px solid #333;
-      border-radius: 15px;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      color: #333;
       overflow: hidden;
-      z-index: 10;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+    
+    /* HEADER */
+    .header {
+      position: fixed; top: 0; left: 0; width: 100%; height: 60px;
+      background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      display: flex; align-items: center; padding: 0 20px; z-index: 100;
+    }
+    
+    .back-btn {
+      padding: 8px 16px; background: #4285f4; color: white;
+      border: none; border-radius: 4px; cursor: pointer;
+    }
+    
+    .header-title { margin-left: 20px; font-size: 20px; font-weight: bold; }
+    
+    /* THEME TOGGLE */
+    #themeToggle {
+      margin-left: 15px; padding: 8px; cursor: pointer; border-radius: 50%;
+      border: 1px solid #ddd; background: #eee; font-size: 14px;
     }
 
-    #messageDisplay {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+    /* ADMIN CONTROLS */
+    .admin-btn {
+      padding: 8px 12px; color: white; border: none; border-radius: 4px;
+      cursor: pointer; font-weight: bold; font-size: 12px; display: none; margin-left: 5px;
+    }
+    #clearBtn { background: #ff4444; }
+    #kickBtn { background: #ff8800; } /* BAN */
+    #settingsBtn { background: #333; }
+    #memberListBtn { background: #2196f3; }
+    
+    .user-info { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .avatar {
+      width: 35px; height: 35px; border-radius: 50%; background: #4285f4;
+      display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;
+    }
+    
+    /* MEMBER LIST */
+    #memberList {
+      position: fixed; right: -350px; top: 60px; width: 340px; height: calc(100vh - 60px);
+      background: white; box-shadow: -2px 0 10px rgba(0,0,0,0.1); transition: right 0.3s ease;
+      z-index: 99; padding: 20px; overflow-y: auto;
+    }
+    #memberList.open { right: 0; }
+    .member-list-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+    .member-item {
+      display: flex; justify-content: space-between; align-items: center; padding: 10px;
+      border-bottom: 1px solid #eee; cursor: default;
+    }
+    .member-item:hover { background: #f5f5f5; }
+    .member-status.online { color: #4caf50; }
+    .member-status.offline { color: #f44336; }
+    .member-controls { display: none; }
+    .member-item:hover .member-controls { display: flex; gap: 5px; }
+    
+    /* CHAT CONTAINER */
+    #chatBox {
+      position: absolute; top: 60px; left: 0; right: 0; bottom: 90px;
+      padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+    }
+    
+    #typingIndicator {
+      position: fixed; bottom: 75px; left: 20px; font-size: 12px;
+      font-style: italic; color: #666; height: 15px;
     }
 
-    /* Message Bubbles */
+    /* MESSAGES */
     .message {
-      max-width: 70%;
-      padding: 10px 15px;
-      border-radius: 18px;
-      font-size: 15px;
-      line-height: 1.4;
-      position: relative;
-      animation: fadeIn 0.3s ease;
+      padding: 10px 15px; border-radius: 12px; max-width: 70%;
+      word-wrap: break-word; animation: slideIn 0.2s ease; position: relative;
     }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-    .my-message {
-      align-self: flex-end;
-      background: #4285f4;
-      color: white;
-      border-bottom-right-radius: 2px;
+    .message.own { background: #4285f4; color: white; margin-left: auto; border-bottom-right-radius: 4px; }
+    .message.other { background: #e8e8e8; color: #333; margin-right: auto; border-bottom-left-radius: 4px; }
+    
+    /* Smooth gradient admin bubble */
+    .message.admin-gradient {
+      background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+      background-size: 300% 300%;
+      border: 2px solid rgba(255,255,255,0.3);
+      box-shadow: 0 4px 15px rgba(102,126,234,0.4);
     }
-
-    .other-message {
-      align-self: flex-start;
-      background: #333;
-      color: #eee;
-      border-bottom-left-radius: 2px;
+    .message.admin-gradient.animate {
+      animation: gradientShift 6s ease-in-out infinite;
+    }
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
 
-    .sender-name {
-      font-size: 11px;
-      color: #aaa;
-      margin-bottom: 4px;
-      display: block;
-    }
+    .message-user { font-size: 11px; opacity: 0.8; margin-bottom: 3px; font-weight: bold; position: relative; display: inline-block; }
+    .message.own .message-user { text-align: right; width: 100%; }
+    .message-text { font-size: 14px; line-height: 1.4; display: block; }
+    
+    .delete-btn { margin-left: 8px; cursor: pointer; opacity: 0.6; font-weight: bold; font-size: 16px; color: #ffcccc; }
+    .message-time { font-size: 10px; opacity: 0.6; margin-top: 3px; }
 
-    /* Input Area */
-    #inputArea {
-      padding: 20px;
-      background: #1a1a1a;
-      border-top: 1px solid #333;
-      display: flex;
-      gap: 10px;
+    /* TOOLTIP */
+    .admin-tooltip {
+      visibility: hidden; width: auto; background-color: #222; color: #fff; text-align: center;
+      padding: 8px; border-radius: 6px; position: absolute; z-index: 10; bottom: 120%; left: 0;
+      opacity: 0; transition: opacity 0.3s; font-size: 11px; pointer-events: auto;
     }
-
-    #messageInput {
-      flex: 1;
-      background: #2a2a2a;
-      border: 1px solid #444;
-      padding: 12px 18px;
-      border-radius: 25px;
-      color: white;
-      outline: none;
+    .message-user:hover .admin-tooltip { visibility: visible; opacity: 1; }
+    .admin-viewable { text-decoration: underline dotted; cursor: help; }
+    .ban-btn, .kick-btn { 
+      background: #ff4444; color: white; border: none; padding: 2px 6px; 
+      border-radius: 3px; margin-left: 5px; cursor: pointer; font-size: 10px;
     }
+    .kick-btn { background: #ff8800; }
 
-    #sendBtn {
-      background: #4285f4;
-      color: white;
-      border: none;
-      padding: 0 20px;
-      border-radius: 25px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: 0.2s;
+    /* INPUT */
+    #messageInputBox {
+      position: fixed; left: 0; right: 0; bottom: 0; height: 70px;
+      padding: 15px 20px; background: white; display: flex; gap: 10px;
+      box-shadow: 0 -2px 5px rgba(0,0,0,0.1); align-items: center;
     }
-    #sendBtn:hover { background: #357ae8; transform: scale(1.05); }
+    #messageInput { flex: 1; padding: 12px 15px; border-radius: 25px; border: 1px solid #ddd; background: #f5f5f5; outline: none; }
+    #sendBtn { padding: 12px 24px; background: #4285f4; color: white; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; }
 
-    /* Custom Scrollbar */
-    #messageDisplay::-webkit-scrollbar { width: 6px; }
-    #messageDisplay::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+    /* DARK MODE STYLES */
+    body.dark-mode { background: #1a1a1a; color: white; }
+    body.dark-mode .header { background: #2c2c2c; border-bottom: 1px solid #444; }
+    body.dark-mode .message.other { background: #2c2c2c; color: white; }
+    body.dark-mode #messageInputBox { background: #2c2c2c; }
+    body.dark-mode #messageInput { background: #1a1a1a; color: white; border-color: #444; }
+    body.dark-mode #themeToggle { background: #444; border-color: #666; }
+    body.dark-mode #memberList { background: #2c2c2c; }
+    body.dark-mode .member-item { border-bottom-color: #444; }
+    body.dark-mode .member-item:hover { background: #444; }
+
+    /* MODAL */
+    #settingsModal {
+      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: white; padding: 20px; border-radius: 8px; z-index: 200; width: 350px;
+    }
+    body.dark-mode #settingsModal { background: #333; color: white; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 150; }
+    .setting-group { margin-bottom: 15px; }
+    .setting-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .checkbox-group { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
   </style>
 </head>
 <body>
-
-  <canvas id="particleCanvas"></canvas>
-
-  <script src="global.js"></script>
-
-  <div id="chatContainer">
-    <div id="messageDisplay">
-      <div style="text-align: center; color: #666; font-size: 13px; margin-top: 20px;">
-        Welcome to the Global Nexus Chat
-      </div>
+  <div class="modal-overlay" id="modalOverlay" onclick="closeSettings()"></div>
+  <div id="settingsModal">
+    <h3>Admin Settings</h3>
+    <div class="setting-group">
+      <label>Bubble Color:</label>
+      <input type="color" id="bubbleColorInput" value="#667eea" style="width:100%">
     </div>
+    <div class="setting-group">
+      <label>Name Color:</label>
+      <input type="color" id="nameColorInput" value="#ffffff" style="width:100%">
+    </div>
+    <div class="setting-group">
+      <label>Gradient Effect:</label>
+      <label class="checkbox-group">
+        <input type="checkbox" id="gradientToggle"> Enable Gradient
+      </label>
+    </div>
+    <div class="setting-group">
+      <label>Animation:</label>
+      <label class="checkbox-group">
+        <input type="checkbox" id="animateToggle"> Enable Animation
+      </label>
+    </div>
+    <button style="width:100%; padding:10px; background:#4285f4; color:white; border:none; border-radius:5px; cursor:pointer; margin-top:10px" onclick="saveAdminSettings()">Save Changes</button>
+  </div>
+
+  <div id="memberList">
+    <div class="member-list-title">Online Members (<span id="onlineCount">0</span>)</div>
+    <div id="memberListContent"></div>
+  </div>
+
+  <div class="header">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <button id="themeToggle" onclick="toggleTheme()">🌙</button>
     
-    <form id="inputArea">
-      <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off">
-      <button type="submit" id="sendBtn">Send</button>
-    </form>
+    <button id="clearBtn" class="admin-btn" onclick="clearAllMessages()">CLEAR</button>
+    <button id="kickBtn" class="admin-btn">BAN</button>
+    <button id="settingsBtn" class="admin-btn" onclick="openSettings()">⚙</button>
+    <button id="memberListBtn" class="admin-btn" onclick="toggleMemberList()">👥</button>
+    
+    <div class="user-info">
+      <div class="avatar" id="userAvatar">U</div>
+      <span id="headerUsername">Username</span>
+    </div>
+  </div>
+
+  <div id="chatBox"></div>
+  <div id="typingIndicator"></div>
+
+  <div id="messageInputBox">
+    <input id="messageInput" type="text" placeholder="Type a message..." onkeypress="handleKeyPress(event)" oninput="handleTyping()">
+    <button id="sendBtn" onclick="sendMessage()">Send</button>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { 
-      getDatabase, ref, push, set, onChildAdded, serverTimestamp 
-    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-
-    // Same config as your call.html
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getDatabase, ref, push, remove, set, update, onChildAdded, onChildRemoved, onValue, get, child, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    
     const firebaseConfig = {
       apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
       authDomain: "chat-or-somethig.firebaseapp.com",
@@ -138,81 +226,286 @@
       messagingSenderId: "598777875087",
       appId: "1:598777875087:web:d100536dd269bc0a9d7efa"
     };
-
+    
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const database = getDatabase(app);
-
+    const dbRef = ref(database);
+    
     let currentUser = null;
-    let username = "";
+    let currentUsername = "User";
+    let isAdmin = false;
+    let isBanned = false;
+    let adminSettings = { gradient: true, animate: true, bubbleColor: "#667eea", nameColor: "#ffffff" };
+    let onlineUsers = {};
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = 'Home.html';
-      } else {
-        currentUser = user;
-        username = user.email.split('@')[0];
-        loadMessages();
-      }
-    });
+    window.goBack = () => { window.location.href = 'cat.html'; };
 
-    const chatForm = document.getElementById('inputArea');
-    const messageInput = document.getElementById('messageInput');
-    const messageDisplay = document.getElementById('messageDisplay');
-
-    // Function to send a message
-    chatForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const text = messageInput.value.trim();
-
-      if (text !== "" && currentUser) {
-        const messagesRef = ref(database, 'globalChat');
-        push(messagesRef, {
-          sender: username,
-          uid: currentUser.uid,
-          text: text,
-          timestamp: serverTimestamp()
+    // Online Status Tracking
+    function updateOnlineStatus(online) {
+      if (currentUser) {
+        set(ref(database, `online/${currentUser.uid}`), {
+          username: currentUsername,
+          timestamp: serverTimestamp(),
+          isOnline: online
         });
-        messageInput.value = "";
       }
+    }
+
+    // Member List toggle
+    window.toggleMemberList = () => {
+      const list = document.getElementById('memberList');
+      list.classList.toggle('open');
+    };
+
+    function updateMemberList() {
+      const content = document.getElementById('memberListContent');
+      const onlineCount = document.getElementById('onlineCount');
+      const users = Object.entries(onlineUsers).filter(([uid, data]) => data.isOnline);
+      
+      content.innerHTML = '';
+      users.forEach(([uid, data]) => {
+        const div = document.createElement('div');
+        div.className = 'member-item';
+        div.innerHTML = `
+          <div>
+            <div style="font-weight: bold;">${data.username}</div>
+            <div class="member-status online" style="font-size: 12px;">● Online</div>
+          </div>
+          ${isAdmin ? `<div class="member-controls">
+            <button class="ban-btn" onclick="toggleMute('${uid}', false)">MUTE</button>
+            <button class="kick-btn" onclick="banUser('${uid}')">BAN</button>
+          </div>` : ''}
+        `;
+        content.appendChild(div);
+      });
+      
+      onlineCount.textContent = users.length;
+    }
+
+    // Admin Controls
+    window.toggleMute = (targetUid, isCurrentlyMuted) => {
+      if (confirm(isCurrentlyMuted ? "Unmute user?" : "Mute user?")) {
+        update(ref(database, `users/${targetUid}`), { isBanned: !isCurrentlyMuted });
+      }
+    };
+
+    window.banUser = (uid) => {
+      if (confirm("Ban this user from the chat?")) {
+        update(ref(database, `users/${uid}`), { kicked: true });
+        remove(ref(database, `online/${uid}`));
+      }
+    };
+
+    window.clearAllMessages = () => {
+      if (confirm("Delete ALL messages?")) set(ref(database, 'messages'), null).then(() => window.location.reload());
+    };
+
+    // Theme & Settings
+    window.toggleTheme = () => {
+      const isDark = document.body.classList.toggle('dark-mode');
+      document.getElementById("themeToggle").textContent = isDark ? "☀️" : "🌙";
+      if (currentUser) {
+        update(ref(database, `users/${currentUser.uid}`), {
+          appearance: isDark ? 'dark' : 'light'
+        });
+      }
+    };
+
+    window.openSettings = () => {
+      document.getElementById('bubbleColorInput').value = adminSettings.bubbleColor;
+      document.getElementById('nameColorInput').value = adminSettings.nameColor;
+      document.getElementById('gradientToggle').checked = adminSettings.gradient;
+      document.getElementById('animateToggle').checked = adminSettings.animate;
+      document.getElementById('modalOverlay').style.display = 'block';
+      document.getElementById('settingsModal').style.display = 'block';
+    };
+
+    window.closeSettings = () => {
+      document.getElementById('modalOverlay').style.display = 'none';
+      document.getElementById('settingsModal').style.display = 'none';
+    };
+
+    window.saveAdminSettings = () => {
+      adminSettings = {
+        gradient: document.getElementById('gradientToggle').checked,
+        animate: document.getElementById('animateToggle').checked,
+        bubbleColor: document.getElementById('bubbleColorInput').value,
+        nameColor: document.getElementById('nameColorInput').value
+      };
+      update(ref(database, `adminSettings/global`), adminSettings);
+      closeSettings();
+      alert("Settings saved!");
+    };
+
+    // Message Handling
+    window.handleKeyPress = (e) => { if (e.key === 'Enter') sendMessage(); };
+    
+    window.handleTyping = () => {
+      if (!currentUser || isBanned) return;
+      set(ref(database, `typing/${currentUser.uid}`), currentUsername);
+      setTimeout(() => remove(ref(database, `typing/${currentUser.uid}`)), 2000);
+    };
+
+    window.sendMessage = () => {
+      const input = document.getElementById("messageInput");
+      const message = input.value.trim();
+      if (!message || !currentUser || isBanned) return;
+      push(ref(database, 'messages'), {
+        text: message,
+        username: currentUsername,
+        userId: currentUser.uid,
+        email: currentUser.email,
+        timestamp: serverTimestamp(),
+        isAdminMsg: isAdmin,
+        adminSettings: isAdmin ? adminSettings : null
+      });
+      input.value = "";
+      updateOnlineStatus(true);
+    };
+
+    window.deleteMessage = (id) => { 
+      if(confirm("Delete this message?")) remove(ref(database, `messages/${id}`)); 
+    };
+
+    function loadMessages() {
+      const chatBox = document.getElementById("chatBox");
+      onChildAdded(ref(database, 'messages'), (snap) => {
+        const msg = snap.val();
+        const isOwn = currentUser && msg.userId === currentUser.uid;
+        const div = document.createElement("div");
+        div.id = `msg-${snap.key}`;
+        div.className = `message ${isOwn ? 'own' : 'other'}`;
+        
+        if (msg.isAdminMsg && msg.adminSettings) {
+          const settings = msg.adminSettings;
+          if (settings.gradient) {
+            div.classList.add('admin-gradient');
+            if (settings.animate) div.classList.add('animate');
+          } else {
+            div.style.background = settings.bubbleColor;
+          }
+        }
+
+        const userSpan = document.createElement("div");
+        userSpan.className = "message-user";
+        userSpan.textContent = isOwn ? "You" : (msg.username || "Unknown");
+        if (msg.isAdminMsg && msg.adminSettings?.nameColor) {
+          userSpan.style.color = msg.adminSettings.nameColor;
+        }
+
+        if (isAdmin && !isOwn) {
+          userSpan.classList.add("admin-viewable");
+          get(child(dbRef, `users/${msg.userId}/isBanned`)).then(s => {
+            const muted = s.val() === true;
+            const tool = document.createElement("span");
+            tool.className = "admin-tooltip";
+            tool.innerHTML = `${msg.email}<br>
+              <button class="ban-btn" onclick="event.stopPropagation(); toggleMute('${msg.userId}', ${muted})">
+                ${muted ? 'UNMUTE' : 'MUTE'}
+              </button>
+              <button class="kick-btn" onclick="event.stopPropagation(); banUser('${msg.userId}')">BAN</button>`;
+            userSpan.appendChild(tool);
+          });
+        }
+        div.appendChild(userSpan);
+
+        const txt = document.createElement("div");
+        txt.className = "message-text";
+        txt.textContent = msg.text;
+        if (isOwn || isAdmin) {
+          const d = document.createElement("span");
+          d.className = "delete-btn"; d.innerHTML = " &times;";
+          d.onclick = () => deleteMessage(snap.key);
+          txt.appendChild(d);
+        }
+        div.appendChild(txt);
+
+        const time = document.createElement("div");
+        time.className = "message-time";
+        const d = new Date(msg.timestamp);
+        time.textContent = d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0');
+        div.appendChild(time);
+
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+      
+      onChildRemoved(ref(database, 'messages'), (snap) => {
+        const el = document.getElementById(`msg-${snap.key}`);
+        if (el) el.remove();
+      });
+    }
+
+    // Auth & Initialization
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = 'cat.html'; return; }
+      currentUser = user;
+      
+      onValue(ref(database, `users/${user.uid}`), (snap) => {
+        const data = snap.val() || {};
+        currentUsername = data.username || user.email.split('@')[0];
+        isAdmin = data.isAdmin === true;
+        isBanned = data.isBanned === true;
+
+        if (data.kicked && !isAdmin) {
+          alert("You were banned from the chat.");
+          updateOnlineStatus(false);
+          signOut(auth).finally(() => {
+            window.location.href = 'cat.html';
+          });
+          return;
+        }
+
+        document.getElementById("headerUsername").textContent = currentUsername;
+        document.getElementById("userAvatar").textContent = currentUsername.charAt(0).toUpperCase();
+
+        ['clearBtn', 'kickBtn', 'settingsBtn'].forEach(id => {
+          document.getElementById(id).style.display = isAdmin ? "block" : "none";
+        });
+        document.getElementById('memberListBtn').style.display = "block";
+
+        document.getElementById("messageInput").disabled = isBanned;
+        if (isBanned) {
+          document.getElementById("messageInput").placeholder = "MUTED";
+        } else {
+          document.getElementById("messageInput").placeholder = "Type a message...";
+        }
+
+        if (data.appearance === 'dark') {
+          document.body.classList.add('dark-mode');
+          document.getElementById("themeToggle").textContent = "☀️";
+        } else {
+          document.body.classList.remove('dark-mode');
+          document.getElementById("themeToggle").textContent = "🌙";
+        }
+
+        updateOnlineStatus(true);
+      });
+
+      onValue(ref(database, 'adminSettings/global'), (snap) => {
+        if (snap.val()) adminSettings = { ...adminSettings, ...snap.val() };
+      });
+
+      loadMessages();
+      
+      onValue(ref(database, 'typing'), (s) => {
+        const d = s.val();
+        const ind = document.getElementById("typingIndicator");
+        if(!d) { ind.textContent=""; return; }
+        const t = Object.keys(d).filter(u => u !== currentUser?.uid).map(u => d[u]);
+        ind.textContent = t.length ? t.join(", ") + " is typing..." : "";
+      });
+
+      onValue(ref(database, 'online'), (snap) => {
+        onlineUsers = snap.val() || {};
+        updateMemberList();
+      });
     });
 
-    // Function to listen for new messages
-    function loadMessages() {
-      const messagesRef = ref(database, 'globalChat');
-      
-      onChildAdded(messagesRef, (snapshot) => {
-        const data = snapshot.val();
-        displayMessage(data);
-      });
-    }
-
-    // Function to render message to UI
-    function displayMessage(data) {
-      const isMe = data.uid === currentUser.uid;
-      const messageDiv = document.createElement('div');
-      messageDiv.className = `message ${isMe ? 'my-message' : 'other-message'}`;
-      
-      messageDiv.innerHTML = `
-        <span class="sender-name">${isMe ? 'You' : data.sender}</span>
-        <div>${escapeHTML(data.text)}</div>
-      `;
-      
-      messageDisplay.appendChild(messageDiv);
-      
-      // Auto-scroll to bottom
-      messageDisplay.scrollTop = messageDisplay.scrollHeight;
-    }
-
-    // Helper to prevent script injection (XSS)
-    function escapeHTML(str) {
-      return str.replace(/[&<>"']/g, function(m) {
-        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m];
-      });
-    }
+    window.addEventListener('beforeunload', () => {
+      updateOnlineStatus(false);
+    });
   </script>
-
-  <script src="particles.js"></script>
-  <script type="module" src="auth.js"></script>
 </body>
 </html>
