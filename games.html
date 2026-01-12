@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nexus - Games</title>
+  <link rel="icon" type="image/png" href="icon.png"> 
   <link rel="stylesheet" href="style.css">
   <style>
     /* --- Game Specific Styles --- */
@@ -80,7 +81,7 @@
     <button class="close-btn" onclick="closeGame()">✕ Exit Game</button>
     
     <div id="chatWidget">
-        <div id="chatHeader" id="chatHeader">
+        <div id="chatHeader">
             <span style="font-size:12px; font-weight:bold;">Nexus Live Chat</span>
             <button onclick="toggleChat()" style="background:none; border:none; color:white; cursor:pointer;">—</button>
         </div>
@@ -118,16 +119,23 @@
           const data = snap.val();
           window.isAdmin = data.isAdmin === true;
           
-          // Sync Sidebar Avatar and Username
+          // --- FIXED USERNAME SYNC ---
+          // Update the avatar initial
           const userInit = document.getElementById('userInitial');
           if(userInit) userInit.textContent = data.username[0].toUpperCase();
           
-          const userInfo = document.querySelector('.user-info');
-          if(userInfo && !document.getElementById('displayUser')) {
-            userInfo.insertAdjacentHTML('afterbegin', `<span id="displayUser" style="margin-right:10px; font-weight:500; color:#4285f4;">${data.username}</span>`);
+          // Find the existing username display (usually inside .user-info)
+          // Instead of adding a new one, we update the one your layout already has
+          const existingUserSpan = document.getElementById('displayUser') || document.querySelector('.user-info span');
+          if (existingUserSpan) {
+            existingUserSpan.id = 'displayUser'; // Ensure it has the ID
+            existingUserSpan.textContent = data.username;
+            existingUserSpan.style.color = "#4285f4"; // Apply the blue color
+            existingUserSpan.style.fontWeight = "500";
+            existingUserSpan.style.marginRight = "10px";
           }
         }
-        // Sync Pinned Games
+        
         onValue(ref(database, 'pinnedGames'), (s) => {
           window.pinnedLabels = s.val() || [];
           if(window.allGames.length) renderGames(window.allGames);
@@ -209,7 +217,6 @@
       btn.className = 'game-card' + (isPinned ? ' pinned' : '');
       btn.innerText = game.label.replace(/^cl/i, '');
       
-      // Admin Pin Button
       if (window.isAdmin) {
         const pBtn = document.createElement('button');
         pBtn.className = 'pin-btn'; pBtn.innerHTML = isPinned ? '✕' : '📌';
@@ -238,7 +245,7 @@
 
     header.onmousedown = (e) => {
         if(e.target.tagName === 'BUTTON') return;
-        shim.style.display = "block"; // Prevents iframe from stealing focus
+        shim.style.display = "block";
         let ox = e.clientX - widget.offsetLeft, oy = e.clientY - widget.offsetTop;
         const move = (m) => { widget.style.left = (m.clientX - ox) + "px"; widget.style.top = (m.clientY - oy) + "px"; };
         const stop = () => { shim.style.display = "none"; document.removeEventListener('mousemove', move); };
