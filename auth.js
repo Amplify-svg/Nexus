@@ -48,7 +48,8 @@ window.logout = () => {
 onAuthStateChanged(auth, async user => {
     const authBox = document.getElementById("auth");
     const content = document.getElementById("content");
-    const header = document.getElementById("header");
+    // global.js uses the class 'header' - check if it exists
+    const header = document.querySelector(".header"); 
 
     if (user) {
         if (authBox) authBox.style.display = "none";
@@ -58,8 +59,17 @@ onAuthStateChanged(auth, async user => {
         const snap = await get(child(ref(database), `users/${user.uid}`));
         if (snap.exists()) {
             const data = snap.val();
-            document.getElementById("headerUsername").textContent = data.username;
-            document.getElementById("userAvatar").textContent = data.username[0].toUpperCase();
+            
+            // SYNC WITH global.js IDs:
+            const nameElem = document.getElementById("headerUserName"); // Capital N
+            const avatarElem = document.getElementById("userInitial");   // Matches global.js
+            
+            if (nameElem) nameElem.textContent = data.username;
+            if (avatarElem) avatarElem.textContent = data.username[0].toUpperCase();
+            
+            // Save to localStorage so global.js can use it on other pages
+            localStorage.setItem('userName', data.username);
+            
             if (data.appearance === 'dark') document.body.classList.add('dark-mode');
         }
     } else {
