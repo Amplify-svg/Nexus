@@ -1,4 +1,4 @@
-/* global.js - Sidebar with Settings included in nav */
+/* global.js - Final Verified Version */
 
 document.addEventListener('DOMContentLoaded', () => {
     const body = document.body;
@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div style="font-weight:bold; font-size:20px; color:#4285f4; margin-left:10px; letter-spacing:1px;">NEXUS</div>
             <div class="user-info">
+                <span id="headerUserName" style="font-size: 14px; font-weight: 500; margin-right: 5px;"></span>
                 <div class="avatar" id="userInitial">?</div>
             </div>
         </div>
@@ -39,24 +40,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
     const userInitial = document.getElementById('userInitial');
+    const headerUserName = document.getElementById('headerUserName');
+    const logoutBtn = document.getElementById('logoutBtn');
 
-    // 3. Toggle Logic
+    // 3. Username & Initial Logic
+    // This pulls the 'userName' we saved in settings.html
+    const savedName = localStorage.getItem('userName');
+    const savedEmail = localStorage.getItem('userEmail');
+
+    if (savedName && savedName !== "undefined") {
+        headerUserName.textContent = savedName;
+        userInitial.textContent = savedName.charAt(0).toUpperCase();
+    } else if (savedEmail) {
+        // Fallback to email if username isn't set yet
+        userInitial.textContent = savedEmail.charAt(0).toUpperCase();
+    }
+
+    // 4. Toggle Logic
     const toggleSidebar = () => {
         sidebar.classList.toggle('open');
         overlay.classList.toggle('active');
     };
 
-    menuBtn.addEventListener('click', toggleSidebar);
-    overlay.addEventListener('click', toggleSidebar);
+    if (menuBtn) menuBtn.addEventListener('click', toggleSidebar);
+    if (overlay) overlay.addEventListener('click', toggleSidebar);
 
-    // 4. Persistence: Set Initial in Avatar
-    const savedEmail = localStorage.getItem('userEmail');
-    if (savedEmail && userInitial) {
-        userInitial.textContent = savedEmail.charAt(0).toUpperCase();
-    }
-
-    // 5. Apply Theme from LocalStorage immediately
+    // 5. Theme Persistence
     if (localStorage.getItem('theme') === 'dark') {
         body.classList.add('dark-mode');
+    }
+
+    // 6. Logout Logic
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = "Home.html";
+        });
     }
 });
