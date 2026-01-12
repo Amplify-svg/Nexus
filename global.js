@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">NEXUS</div>
             <div class="nav-items">
-                <a href="home.html" class="nav-item">🏠 Home</a>
+                <a href="rpg.htmll" class="nav-item">🏠 Home</a>
                 <a href="chat.html" class="nav-item">💬 Chat</a>
                 <a href="call.html" class="nav-item">📞 Video Call</a>
                 <a href="research.html" class="nav-item">🌐 Research Portal</a>
