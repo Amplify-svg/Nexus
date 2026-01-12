@@ -1,5 +1,4 @@
 /* global.js - Final Verified Version */
-
 document.addEventListener('DOMContentLoaded', () => {
     const body = document.body;
 
@@ -11,11 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div style="font-weight:bold; font-size:20px; color:#4285f4; margin-left:10px; letter-spacing:1px;">NEXUS</div>
             <div class="user-info">
-                <span id="headerUserName" style="font-size: 14px; font-weight: 500; margin-right: 5px;"></span>
+                <span id="headerUserName" style="font-size: 14px; font-weight: 500; margin-right: 8px;"></span>
                 <div class="avatar" id="userInitial">?</div>
             </div>
         </div>
-
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">NEXUS</div>
             <div class="nav-items">
@@ -36,45 +34,41 @@ document.addEventListener('DOMContentLoaded', () => {
     body.insertAdjacentHTML('afterbegin', navHTML);
 
     // 2. Selectors
+    const userInitial = document.getElementById('userInitial');
+    const headerUserName = document.getElementById('headerUserName');
+
+    // 3. The Update Function
+    const refreshUserData = () => {
+        const savedName = localStorage.getItem('userName');
+        if (savedName && savedName !== "undefined" && savedName !== "null") {
+            headerUserName.textContent = savedName;
+            userInitial.textContent = savedName.charAt(0).toUpperCase();
+        }
+    };
+
+    // Run immediately on load
+    refreshUserData();
+
+    // LISTEN for the 'nameUpdated' signal from settings.html
+    window.addEventListener('nameUpdated', refreshUserData);
+
+    // 4. Standard Sidebar Logic
     const menuBtn = document.getElementById('menuBtn');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
-    const userInitial = document.getElementById('userInitial');
-    const headerUserName = document.getElementById('headerUserName');
-    const logoutBtn = document.getElementById('logoutBtn');
-
-    // 3. Username & Initial Logic
-    // This pulls the 'userName' we saved in settings.html
-    const savedName = localStorage.getItem('userName');
-    const savedEmail = localStorage.getItem('userEmail');
-
-    if (savedName && savedName !== "undefined") {
-        headerUserName.textContent = savedName;
-        userInitial.textContent = savedName.charAt(0).toUpperCase();
-    } else if (savedEmail) {
-        // Fallback to email if username isn't set yet
-        userInitial.textContent = savedEmail.charAt(0).toUpperCase();
-    }
-
-    // 4. Toggle Logic
+    
     const toggleSidebar = () => {
         sidebar.classList.toggle('open');
         overlay.classList.toggle('active');
     };
 
-    if (menuBtn) menuBtn.addEventListener('click', toggleSidebar);
-    if (overlay) overlay.addEventListener('click', toggleSidebar);
+    if (menuBtn) menuBtn.onclick = toggleSidebar;
+    if (overlay) overlay.onclick = toggleSidebar;
 
-    // 5. Theme Persistence
-    if (localStorage.getItem('theme') === 'dark') {
-        body.classList.add('dark-mode');
-    }
+    if (localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode');
 
-    // 6. Logout Logic
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            localStorage.clear();
-            window.location.href = "Home.html";
-        });
-    }
+    document.getElementById('logoutBtn').onclick = () => {
+        localStorage.clear();
+        window.location.href = "Home.html";
+    };
 });
