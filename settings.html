@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nexus - Settings</title>
+  <link rel="icon" type="image/png" href="icon.png"> 
   <link rel="stylesheet" href="style.css">
   <style>
-    /* We removed the hardcoded dark background here so style.css can control it */
+    /* Removed hardcoded dark background to allow style.css to manage light/dark modes */
     .settings-page {
       max-width: 700px;
       margin: 100px auto 40px;
@@ -21,15 +22,11 @@
       padding: 25px;
       margin-bottom: 25px;
       transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(0, 0, 0, 0.1);
     }
 
-    /* Light mode specific section styling */
-    .settings-section {
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid #ddd;
-    }
-
-    /* Dark mode override for section styling */
+    /* Dark mode override for the section boxes */
     body.dark-mode .settings-section {
       background: rgba(30, 30, 30, 0.6);
       border: 1px solid #333;
@@ -148,19 +145,23 @@
     let storedEmail = "";
 
     onAuthStateChanged(auth, async user => {
-      if (!user) window.location.href = "Home.html";
+      if (!user) {
+        window.location.href = "Home.html";
+        return;
+      }
       currentUser = user;
       
       const snap = await get(child(ref(database), `users/${user.uid}`));
       const data = snap.val() || {};
       
       storedEmail = data.email || user.email;
-      const username = data.username || "User";
+      // MATCHES DATABASE: Using 'username' in lowercase
+      const currentUsername = data.username || "User";
       
-      // Save to localStorage so global.js can update the top-right header
-      localStorage.setItem('userName', username);
-      document.getElementById('usernameDisplay').textContent = username;
+      localStorage.setItem('userName', currentUsername);
+      document.getElementById('usernameDisplay').textContent = currentUsername;
       
+      // Sync Appearance
       if (data.appearance === "dark") {
           updateUIAppearance("dark");
       } else {
@@ -187,7 +188,9 @@
     async function saveAppearance(mode) {
       updateUIAppearance(mode);
       localStorage.setItem('theme', mode); 
-      if (currentUser) await update(ref(database, `users/${currentUser.uid}`), { appearance: mode });
+      if (currentUser) {
+        await update(ref(database, `users/${currentUser.uid}`), { appearance: mode });
+      }
     }
 
     document.getElementById('editUserBtn').onclick = async () => {
