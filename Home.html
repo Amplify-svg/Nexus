@@ -15,36 +15,49 @@
     body.logged-in .sidebar { left: 0; }
     body.logged-in .container { margin-left: 260px; width: calc(100% - 260px); }
 
-    .nav-items { margin-top: 30px; flex-grow: 1; display: flex; flex-direction: column; gap: 10px; }
+    .nav-items { margin-top: 30px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+    
+    /* Matching the global.js button style */
     .nav-item { 
-      color: #888; text-decoration: none; padding: 12px 15px; border-radius: 8px; 
-      transition: 0.3s; font-weight: 500;
+      color: #aaa; text-decoration: none; padding: 12px 18px; border-radius: 10px; 
+      transition: 0.2s; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 12px;
     }
-    .nav-item:hover, .nav-item.active { background: rgba(66, 133, 244, 0.1); color: #4285f4; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; transform: translateX(5px); }
+    .nav-item.active { background: rgba(66, 133, 244, 0.15); color: #4285f4; }
 
-    .sidebar-footer { border-top: 1px solid #333; padding-top: 20px; }
-    .user-info { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+    .sidebar-footer { border-top: 1px solid #222; padding-top: 20px; margin-top: auto; }
+    .user-info { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 0 10px; }
     .avatar { 
-      width: 35px; height: 35px; background: #4285f4; color: white; 
-      border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; 
+      width: 38px; height: 38px; background: linear-gradient(135deg, #4285f4, #34a853); color: white; 
+      border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; 
     }
 
-    /* --- Auth Box Polish --- */
+    /* --- Auth Box --- */
     .container { display: flex; justify-content: center; align-items: center; height: 100vh; transition: 0.4s; }
     .auth-box {
-      background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px);
-      padding: 40px; border-radius: 20px; width: 100%; max-width: 400px;
-      text-align: center; border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(25, 25, 25, 0.6); backdrop-filter: blur(20px);
+      padding: 40px; border-radius: 24px; width: 100%; max-width: 400px;
+      text-align: center; border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
     }
     .auth-box input {
-      width: 100%; padding: 12px 20px; margin: 10px 0; background: rgba(0,0,0,0.3);
-      border: 1px solid #444; border-radius: 50px; color: white; outline: none;
+      width: 100%; padding: 14px 20px; margin: 10px 0; background: rgba(0,0,0,0.4);
+      border: 1px solid #333; border-radius: 12px; color: white; outline: none; transition: 0.3s;
     }
-    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
-    button { flex: 1; padding: 12px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+    .auth-box input:focus { border-color: #4285f4; background: #000; }
+    
+    .btn-group { display: flex; gap: 12px; margin-top: 25px; }
+    button { flex: 1; padding: 14px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: 0.3s; }
     button.primary { background: #4285f4; color: white; }
-    button.secondary { background: transparent; color: #888; border: 1px solid #444; }
-    .logout-btn { background: #ea4335; color: white; width: 100%; }
+    button.primary:hover { background: #357ae8; box-shadow: 0 0 20px rgba(66,133,244,0.4); }
+    button.secondary { background: #222; color: #eee; }
+    button.secondary:hover { background: #333; }
+    
+    .logout-btn { 
+        background: rgba(234, 67, 53, 0.1); color: #ea4335; border: 1px solid rgba(234, 67, 53, 0.2); 
+        width: 100%; padding: 10px; font-size: 13px;
+    }
+    .logout-btn:hover { background: #ea4335; color: white; }
   </style>
 </head>
 <body class="dark-mode">
@@ -52,38 +65,49 @@
   <canvas id="particleCanvas"></canvas>
 
   <nav id="sidebar" class="sidebar">
-    <div style="font-weight: 900; font-size: 22px; color: white; letter-spacing: 2px;">NEXUS</div>
+    <div style="font-weight: 900; font-size: 24px; color: white; letter-spacing: 3px; padding-left: 15px;">NEXUS</div>
+    
     <div class="nav-items">
-      <a href="Home.html" class="nav-item active">🏠 Home</a>
-      <a href="games.html" class="nav-item">🎮 Games</a>
-      <a href="chat.html" class="nav-item">💬 Chat</a>
+      <a href="Home.html" class="nav-item active"><span>🏠</span> Home</a>
+      <a href="games.html" class="nav-item"><span>🎮</span> Games</a>
+      <a href="chat.html" class="nav-item"><span>💬</span> Chat</a>
+      <a href="#" class="nav-item"><span>⚙️</span> Settings</a>
+      <a href="#" class="nav-item"><span>🛡️</span> Admin</a>
     </div>
+
     <div class="sidebar-footer">
       <div class="user-info">
         <div id="userInitial" class="avatar">?</div>
-        <span id="displayUser" style="color: white; font-weight: 500;">User</span>
+        <div style="display: flex; flex-direction: column;">
+            <span id="displayUser" style="color: white; font-weight: 600; font-size: 14px;">User</span>
+            <span style="color: #555; font-size: 11px;">Verified Member</span>
+        </div>
       </div>
-      <button class="logout-btn" onclick="logout()">Logout</button>
+      <button class="logout-btn" onclick="logout()">LOGOUT SESSION</button>
     </div>
   </nav>
 
   <div class="container">
     <div id="auth">
       <div class="auth-box">
-        <h2>Authentication</h2>
+        <h2 style="color:white; margin-bottom: 5px;">Nexus OS</h2>
+        <p style="color:#666; font-size: 14px; margin-bottom: 25px;">Biometric or Manual Authentication Required</p>
+        
         <input type="email" id="email" placeholder="Email" />
         <input type="password" id="password" placeholder="Password" />
+        
         <div class="btn-group">
-          <button class="primary" onclick="login()">Login</button>
-          <button class="secondary" onclick="register()">Register</button>
+          <button class="primary" onclick="login()">LOGIN</button>
+          <button class="secondary" onclick="register()">SIGN UP</button>
         </div>
       </div>
     </div>
     
     <div id="content" style="display: none;">
-      <div class="auth-box">
-        <h2 style="color: #4285f4;">Welcome Back</h2>
-        <p>System access granted. Select a module from the sidebar.</p>
+      <div class="auth-box" style="max-width: 450px;">
+        <h2 style="color: #4285f4; margin-bottom: 10px;">Access Granted</h2>
+        <p style="color: #888; line-height: 1.6;">Welcome back to the Nexus Core. All encrypted channels are now open. Use the sidebar to navigate between sectors.</p>
+        <button class="primary" style="margin-top: 30px; width: 100%;" onclick="window.location.href='games.html'">LAUNCH INTERFACE</button>
       </div>
     </div>
   </div>
