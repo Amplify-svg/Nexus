@@ -1,6 +1,7 @@
+// auth.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import { getDatabase, ref, set, get, child, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
@@ -16,6 +17,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
 
+// Make functions global so HTML buttons can see them
 window.register = () => {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
@@ -23,7 +25,7 @@ window.register = () => {
         .then(async (userCredential) => {
             const user = userCredential.user;
             const username = user.email.split('@')[0];
-            await set(ref(database, `users/${user.uid}`), { username, appearance: 'dark', isAdmin: false });
+            await set(ref(database, `users/${user.uid}`), { username, appearance: 'light' });
         }).catch(err => alert(err.message));
 };
 
@@ -35,30 +37,35 @@ window.login = () => {
 
 window.logout = () => {
     signOut(auth).then(() => { 
-        window.location.href = 'Home.html'; 
+        if(location.pathname.includes('Home.html')) {
+            location.reload();
+        } else {
+            location.href = 'Home.html'; 
+        }
     });
 };
 
 onAuthStateChanged(auth, async user => {
-    if (user) {
-        document.body.classList.add('logged-in');
-        document.getElementById("auth").style.display = "none";
-        document.getElementById("content").style.display = "block";
+    const authBox = document.getElementById("auth");
+    const content = document.getElementById("content");
+    const header = document.getElementById("header");
 
-        // Ghost Fix: Mark online and remove on disconnect
-        const statusRef = ref(database, `online/${user.uid}`);
-        set(statusRef, { timestamp: serverTimestamp() });
-        onDisconnect(statusRef).remove();
+    if (user) {
+        if (authBox) authBox.style.display = "none";
+        if (content) content.style.display = "block";
+        if (header) header.style.display = "flex";
 
         const snap = await get(child(ref(database), `users/${user.uid}`));
         if (snap.exists()) {
             const data = snap.val();
-            document.getElementById("displayUser").textContent = data.username;
-            document.getElementById("userInitial").textContent = data.username[0].toUpperCase();
+            document.getElementById("headerUsername").textContent = data.username;
+            document.getElementById("userAvatar").textContent = data.username[0].toUpperCase();
+            if (data.appearance === 'dark') document.body.classList.add('dark-mode');
         }
     } else {
-        document.body.classList.remove('logged-in');
-        document.getElementById("auth").style.display = "block";
-        document.getElementById("content").style.display = "none";
+        if (authBox) authBox.style.display = "block";
+        if (content) content.style.display = "none";
+        if (header) header.style.display = "none";
+        document.body.classList.remove('dark-mode');
     }
 });
