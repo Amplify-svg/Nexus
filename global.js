@@ -47,13 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Run immediately on load
     refreshUserData();
-
-    // LISTEN for the 'nameUpdated' signal from settings.html
     window.addEventListener('nameUpdated', refreshUserData);
 
-    // 4. Standard Sidebar Logic
+    // 4. Sidebar Logic
     const menuBtn = document.getElementById('menuBtn');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
@@ -68,19 +65,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (localStorage.getItem('theme') === 'dark') body.classList.add('dark-mode');
 
-    // --- Logout Button Visibility Logic ---
+    // --- Logout Visibility Logic ---
+    // Shows button only on Home.html or root
     const isHomePage = window.location.pathname.endsWith('Home.html') || window.location.pathname === '/' || window.location.pathname.endsWith('index.html');
     if (logoutBtn && isHomePage) {
         logoutBtn.style.display = 'block';
     }
 
-    // --- Enhanced Logout Function ---
+    // --- Firebase Integration Logout ---
     logoutBtn.onclick = () => {
-        // Clear all session and local data
+        // 1. Clear Local Data
         localStorage.clear();
         sessionStorage.clear();
         
-        // Redirect using replace to prevent back-button navigation into private areas
-        window.location.replace("Home.html");
+        // 2. Trigger the Firebase Logout from auth.js
+        if (typeof window.logout === 'function') {
+            window.logout();
+        } else {
+            // Fallback if auth.js isn't loaded/ready
+            window.location.replace("Home.html");
+        }
     };
 });
