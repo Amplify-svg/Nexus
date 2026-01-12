@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" href="icon.png"> 
   <link rel="stylesheet" href="style.css">
   <style>
-    /* Removed hardcoded dark background to allow style.css to manage light/dark modes */
+    /* CSS specifically for the Settings layout */
     .settings-page {
       max-width: 700px;
       margin: 100px auto 40px;
@@ -26,7 +26,7 @@
       border: 1px solid rgba(0, 0, 0, 0.1);
     }
 
-    /* Dark mode override for the section boxes */
+    /* Dark mode override for settings sections */
     body.dark-mode .settings-section {
       background: rgba(30, 30, 30, 0.6);
       border: 1px solid #333;
@@ -155,13 +155,16 @@
       const data = snap.val() || {};
       
       storedEmail = data.email || user.email;
-      // MATCHES DATABASE: Using 'username' in lowercase
+      // Matches your database path specifically
       const currentUsername = data.username || "User";
       
+      // Save locally and update UI
       localStorage.setItem('userName', currentUsername);
       document.getElementById('usernameDisplay').textContent = currentUsername;
       
-      // Sync Appearance
+      // Signal global.js to update the header
+      window.dispatchEvent(new Event('nameUpdated'));
+      
       if (data.appearance === "dark") {
           updateUIAppearance("dark");
       } else {
@@ -198,6 +201,8 @@
       if (name) {
         await update(ref(database, `users/${currentUser.uid}`), { username: name });
         localStorage.setItem('userName', name); 
+        // Signal global.js to refresh the top-right header
+        window.dispatchEvent(new Event('nameUpdated'));
         location.reload();
       }
     };
