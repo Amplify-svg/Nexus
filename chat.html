@@ -23,97 +23,84 @@
       padding: 10px 15px; border-radius: 18px; max-width: 75%;
       word-wrap: break-word; animation: messageFade 0.3s ease; position: relative;
     }
+    /* Theme-aware bubbles */
     .message.own { background: #4285f4; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-    .message.other { background: #333; color: white; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .message.other { background: #e0e0e0; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; }
     
+    body.dark-mode .message.other { background: #333; color: white; }
+
     /* Admin Specials */
     .message.admin-gradient {
       background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
       background-size: 300% 300%;
       box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+      color: white !important;
     }
     .message.admin-gradient.animate { animation: gradientShift 6s ease infinite; }
 
     @keyframes messageFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-    /* Admin Tooltip */
-    .message-user { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: inline-block; position: relative; cursor: default; }
+    .message-user { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; position: relative; }
     .admin-viewable { text-decoration: underline dotted #4285f4; cursor: help; }
 
+    /* Admin Tooltip */
     .admin-tooltip {
       visibility: hidden; width: 180px; background-color: #222; color: #fff;
       text-align: center; border-radius: 6px; padding: 10px;
       position: absolute; z-index: 100; bottom: 125%; left: 0;
       opacity: 0; transition: opacity 0.2s; border: 1px solid #444; font-weight: normal; font-size: 11px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
     }
     .message-user:hover .admin-tooltip { visibility: visible; opacity: 1; }
 
-    .tooltip-btn { border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; margin: 5px 2px 0; color: white; font-weight: bold; width: 70px; }
-    .btn-mute { background: #ff8800; }
-    .btn-ban { background: #ea4335; }
-
-    .delete-btn { color: rgba(255,255,255,0.4); margin-left: 8px; cursor: pointer; }
-    
-    /* Input Bar */
+    /* Input Bar Theme-Aware */
     #messageInputBox {
       position: fixed; left: 0; right: 0; bottom: 0; height: 80px;
-      padding: 15px 20px; background: rgba(20,20,20,0.95);
-      display: flex; gap: 10px; align-items: center; border-top: 1px solid #333; z-index: 10;
+      padding: 15px 20px; background: rgba(255,255,255,0.95);
+      display: flex; gap: 10px; align-items: center; border-top: 1px solid #ddd; z-index: 10;
+      backdrop-filter: blur(10px);
     }
-    #messageInput { flex: 1; padding: 12px 20px; border-radius: 30px; border: 1px solid #444; background: #111; color: white; outline: none; }
-    #messageInput:disabled { opacity: 0.5; cursor: not-allowed; }
+    body.dark-mode #messageInputBox { background: rgba(20,20,20,0.95); border-top: 1px solid #333; }
+
+    #messageInput { flex: 1; padding: 12px 20px; border-radius: 30px; border: 1px solid #ddd; outline: none; }
+    body.dark-mode #messageInput { background: #111; color: white; border-color: #444; }
 
     /* Member List Drawer */
     #memberList {
       position: fixed; right: -320px; top: 0; width: 300px; height: 100vh;
-      background: #1a1a1a; border-left: 1px solid #333; transition: 0.3s; z-index: 4000; padding: 20px;
-      display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+      background: white; border-left: 1px solid #ddd; transition: 0.3s; z-index: 4000; padding: 20px;
+      display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.1);
     }
+    body.dark-mode #memberList { background: #1a1a1a; border-left: 1px solid #333; color: white; }
     #memberList.open { right: 0; }
-    .member-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333; }
-    .member-name { font-weight: bold; font-size: 14px; }
-    .muted-tag { font-size: 10px; color: #ff8800; margin-left: 5px; }
-    
-    .close-drawer { background: none; border: none; color: #888; font-size: 28px; cursor: pointer; align-self: flex-end; margin-bottom: 10px; }
-    .close-drawer:hover { color: white; }
-
-    /* Admin Modals */
-    #adminModal {
-      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
-      background: #222; padding: 30px; border-radius: 12px; z-index: 5000; border: 1px solid #444; width: 350px;
-    }
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 4999; }
+    .member-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(128,128,128,0.2); }
   </style>
 </head>
-<body class="dark-mode">
+<body>
 
-  <canvas id="particleCanvas" style="position:fixed; top:0; left:0; pointer-events:none; z-index:1;"></canvas>
+  <canvas id="particleCanvas"></canvas>
   <script src="global.js"></script>
 
-  <div class="modal-overlay" id="modalOverlay" onclick="closeAdminSettings()"></div>
-  <div id="adminModal">
-    <h3 style="margin-bottom:20px; text-align:center;">Admin Global Style</h3>
-    <label style="font-size:12px; color:#888;">BUBBLE COLOR</label>
-    <input type="color" id="bubbleColorInput" style="width:100%; height:40px; margin-bottom:15px; border:none; background:none;">
-    <label style="font-size:12px; color:#888;">NAME COLOR</label>
-    <input type="color" id="nameColorInput" style="width:100%; height:40px; margin-bottom:15px; border:none; background:none;">
-    <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px;"><input type="checkbox" id="gradientToggle"> Enable Gradient</label>
-    <label style="display:flex; align-items:center; gap:10px; margin-bottom:20px;"><input type="checkbox" id="animateToggle"> Enable Animation</label>
-    <button onclick="saveAdminSettings()" style="width:100%; padding:12px; background:#4285f4; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">SAVE SETTINGS</button>
-  </div>
-
   <div id="memberList">
-    <button class="close-drawer" onclick="toggleMemberList()">×</button>
+    <button style="background:none; border:none; font-size:24px; cursor:pointer; color:inherit; align-self:flex-end;" onclick="toggleMemberList()">×</button>
     <h3 style="margin-bottom:15px;">Online Members (<span id="onlineCount">0</span>)</h3>
     <div id="memberListContent" style="overflow-y:auto; flex:1;"></div>
   </div>
 
-  <div id="adminActions" style="position: fixed; top: 75px; right: 20px; z-index: 10; display: none; gap: 10px;">
-    <button onclick="clearChat()" style="background:#ea4335; border:none; color:white; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">CLEAR CHAT</button>
-    <button onclick="toggleMemberList()" style="background:#333; border:none; color:white; padding:8px 12px; border-radius:5px; cursor:pointer;">👥</button>
-    <button onclick="openAdminSettings()" style="background:#333; border:none; color:white; padding:8px 12px; border-radius:5px; cursor:pointer;">⚙️</button>
+  <div id="adminModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#222; color:white; padding:30px; border-radius:12px; z-index:5001; border:1px solid #444; width:320px;">
+    <h3 style="margin-bottom:15px;">Admin Style</h3>
+    <input type="color" id="bubbleColorInput" style="width:100%; height:40px; margin-bottom:10px;">
+    <input type="color" id="nameColorInput" style="width:100%; height:40px; margin-bottom:10px;">
+    <label><input type="checkbox" id="gradientToggle"> Gradient</label><br>
+    <label><input type="checkbox" id="animateToggle"> Animation</label><br><br>
+    <button onclick="saveAdminSettings()" style="width:100%; padding:10px; background:#4285f4; border:none; color:white; border-radius:5px;">Save</button>
+  </div>
+  <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:5000;" onclick="closeAdminSettings()"></div>
+
+  <div id="topActions" style="position: fixed; top: 75px; right: 20px; z-index: 10; display: flex; gap: 10px;">
+    <button id="adminClearBtn" onclick="clearChat()" style="display:none; background:#ea4335; border:none; color:white; padding:8px 15px; border-radius:5px; cursor:pointer;">CLEAR CHAT</button>
+    <button onclick="toggleMemberList()" style="background:#4285f4; border:none; color:white; padding:8px 12px; border-radius:5px; cursor:pointer;">👥 Members</button>
+    <button id="adminSettingsBtn" onclick="openAdminSettings()" style="display:none; background:#333; border:none; color:white; padding:8px 12px; border-radius:5px; cursor:pointer;">⚙️</button>
   </div>
 
   <div id="chatBox"></div>
@@ -127,7 +114,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getDatabase, ref, push, remove, set, update, onChildAdded, onChildRemoved, onValue, get, child, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getDatabase, ref, push, remove, set, update, onChildAdded, onChildRemoved, onValue, get, child, serverTimestamp, query, orderByChild } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
@@ -147,10 +134,9 @@
     let adminSettings = { gradient: true, animate: true, bubbleColor: "#667eea", nameColor: "#ffffff" };
 
     onAuthStateChanged(auth, async (user) => {
-      if (!user) { window.location.href = 'index.html'; return; }
+      if (!user) { window.location.href = 'Home.html'; return; }
       currentUser = user;
 
-      // Listen to Current User's Specific Data
       onValue(ref(database, `users/${user.uid}`), (snap) => {
         const data = snap.val() || {};
         currentUsername = data.username || user.email.split('@')[0];
@@ -158,12 +144,14 @@
         isBanned = data.isBanned === true;
 
         if (data.kicked && !isAdmin) {
-          alert("You have been banned from this chat.");
-          signOut(auth).then(() => window.location.href = 'index.html');
+          alert("You have been banned.");
+          signOut(auth).then(() => window.location.href = 'Home.html');
           return;
         }
 
-        document.getElementById('adminActions').style.display = isAdmin ? 'flex' : 'none';
+        // UI Adjustments based on rank
+        document.getElementById('adminClearBtn').style.display = isAdmin ? 'block' : 'none';
+        document.getElementById('adminSettingsBtn').style.display = isAdmin ? 'block' : 'none';
         document.getElementById('messageInput').disabled = isBanned;
         document.getElementById('messageInput').placeholder = isBanned ? "YOU ARE MUTED" : "Type a message...";
         
@@ -171,23 +159,25 @@
       });
 
       onValue(ref(database, 'adminSettings/global'), (s) => { if(s.exists()) adminSettings = s.val(); });
+      
       setupChat();
+      setupTypingLogic();
     });
 
     function setupChat() {
-      // Clear UI when clearing DB
+      const messagesRef = query(ref(database, 'messages'), orderByChild('timestamp'));
+      const chatBox = document.getElementById("chatBox");
+
+      onChildAdded(messagesRef, (s) => {
+        renderMessage(s.key, s.val());
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+
       onChildRemoved(ref(database, 'messages'), (s) => {
         const el = document.getElementById(`msg-${s.key}`);
         if (el) el.remove();
       });
 
-      onChildAdded(ref(database, 'messages'), (s) => {
-        renderMessage(s.key, s.val());
-        const chatBox = document.getElementById("chatBox");
-        chatBox.scrollTop = chatBox.scrollHeight;
-      });
-
-      // Member list logic
       onValue(ref(database, 'online'), (snap) => {
           updateMemberList(snap.val() || {});
       });
@@ -211,20 +201,13 @@
       userSpan.textContent = isOwn ? "You" : msg.username;
       if (msg.isAdminMsg && msg.style?.nameColor) userSpan.style.color = msg.style.nameColor;
 
-      // Admin Hover Tooltip
       if (isAdmin && !isOwn) {
-        const userRef = await get(child(ref(database), `users/${msg.userId}`));
-        const targetData = userRef.val() || {};
-        const isMuted = targetData.isBanned === true;
-
         const tooltip = document.createElement("div");
         tooltip.className = "admin-tooltip";
         tooltip.innerHTML = `
-          <b style="color:#4285f4">${msg.email || 'No Email'}</b><br>
-          <button class="tooltip-btn btn-mute" onclick="adminMute('${msg.userId}', ${isMuted})">
-            ${isMuted ? 'UNMUTE' : 'MUTE'}
-          </button>
-          <button class="tooltip-btn btn-ban" onclick="adminBan('${msg.userId}')">BAN</button>
+          <b>${msg.email}</b><br>
+          <button style="background:#ff8800; border:none; color:white; padding:4px; margin:2px; cursor:pointer;" onclick="adminMute('${msg.userId}')">Mute/Unmute</button>
+          <button style="background:#ea4335; border:none; color:white; padding:4px; margin:2px; cursor:pointer;" onclick="adminBan('${msg.userId}')">Ban</button>
         `;
         userSpan.appendChild(tooltip);
       }
@@ -234,13 +217,43 @@
 
       if (isAdmin || isOwn) {
         const del = document.createElement("span");
-        del.className = "delete-btn"; del.innerHTML = " &times;";
-        del.onclick = (e) => { e.stopPropagation(); remove(ref(database, `messages/${id}`)); };
+        del.style = "color:rgba(128,128,128,0.5); margin-left:10px; cursor:pointer;";
+        del.innerHTML = "&times;";
+        del.onclick = () => remove(ref(database, `messages/${id}`));
         textDiv.appendChild(del);
       }
 
       div.append(userSpan, textDiv);
       document.getElementById("chatBox").appendChild(div);
+    }
+
+    // --- Typing Logic ---
+    let typingTimeout;
+    function setupTypingLogic() {
+      const input = document.getElementById('messageInput');
+      input.addEventListener('input', () => {
+        if (currentUser) {
+          set(ref(database, `typing/${currentUser.uid}`), { username: currentUsername, isTyping: true });
+          clearTimeout(typingTimeout);
+          typingTimeout = setTimeout(() => {
+            set(ref(database, `typing/${currentUser.uid}`), null);
+          }, 2000);
+        }
+      });
+
+      onValue(ref(database, 'typing'), (snap) => {
+        const typingData = snap.val() || {};
+        const typingUsers = Object.values(typingData)
+          .filter(u => u.username !== currentUsername)
+          .map(u => u.username);
+        
+        const indicator = document.getElementById('typingIndicator');
+        if (typingUsers.length > 0) {
+          indicator.textContent = typingUsers.join(', ') + (typingUsers.length > 1 ? " are typing..." : " is typing...");
+        } else {
+          indicator.textContent = "";
+        }
+      });
     }
 
     async function updateMemberList(onlineData) {
@@ -252,59 +265,37 @@
         if (!data.isOnline) continue;
         count++;
 
-        // Get live mute status for the member list
         const userSnap = await get(child(ref(database), `users/${uid}`));
-        const userFullData = userSnap.val() || {};
-        const isMuted = userFullData.isBanned === true;
+        const isMuted = userSnap.val()?.isBanned === true;
 
         const div = document.createElement('div');
         div.className = 'member-item';
-        div.innerHTML = `
-            <div class="member-name">
-                ${data.username} ${isMuted ? '<span class="muted-tag">[MUTED]</span>' : ''}
-            </div>
-        `;
+        div.innerHTML = `<div class="member-name">${data.username} ${isMuted ? '<span style="color:#ff8800; font-size:10px;">[MUTED]</span>' : ''}</div>`;
         
         if (isAdmin && uid !== currentUser.uid) {
-            const btnGroup = document.createElement('div');
-            btnGroup.style.display = 'flex';
-            btnGroup.style.gap = '5px';
-            
-            const muteBtn = document.createElement('button');
-            muteBtn.textContent = isMuted ? 'UNMUTE' : 'MUTE';
-            muteBtn.style = "background:#666; color:white; border:none; border-radius:4px; font-size:10px; padding:4px 8px; cursor:pointer;";
-            muteBtn.onclick = () => adminMute(uid, isMuted);
-
-            const banBtn = document.createElement('button');
-            banBtn.textContent = 'BAN';
-            banBtn.style = "background:#ea4335; color:white; border:none; border-radius:4px; font-size:10px; padding:4px 8px; cursor:pointer;";
-            banBtn.onclick = () => adminBan(uid);
-
-            btnGroup.append(muteBtn, banBtn);
-            div.appendChild(btnGroup);
+          const btn = document.createElement('button');
+          btn.textContent = isMuted ? 'UNMUTE' : 'MUTE';
+          btn.style = "background:#666; color:white; border:none; padding:4px 8px; font-size:10px; cursor:pointer;";
+          btn.onclick = () => adminMute(uid);
+          div.appendChild(btn);
         }
         content.appendChild(div);
       }
       document.getElementById('onlineCount').textContent = count;
     }
 
-    // --- Admin Actions ---
-    window.adminMute = (uid, currentStatus) => {
-      update(ref(database, `users/${uid}`), { isBanned: !currentStatus });
+    window.adminMute = async (uid) => {
+      const snap = await get(child(ref(database), `users/${uid}`));
+      const status = snap.val()?.isBanned || false;
+      update(ref(database, `users/${uid}`), { isBanned: !status });
     };
 
     window.adminBan = (uid) => {
-      if(confirm("Kick and permanently ban this user?")) {
-          update(ref(database, `users/${uid}`), { kicked: true });
-      }
+      if(confirm("Permanently ban this user?")) update(ref(database, `users/${uid}`), { kicked: true });
     };
 
     window.clearChat = () => {
-      if(confirm("DANGER: Are you sure you want to clear ALL messages?")) {
-        remove(ref(database, 'messages')).then(() => {
-            document.getElementById("chatBox").innerHTML = "";
-        }).catch(err => alert("Permission Error: Check Firebase Rules. " + err.message));
-      }
+      if(confirm("Clear all messages?")) remove(ref(database, 'messages'));
     };
 
     window.sendMessage = () => {
@@ -320,41 +311,30 @@
         timestamp: serverTimestamp()
       });
       input.value = "";
+      set(ref(database, `typing/${currentUser.uid}`), null);
     };
 
-    // --- UI Controls ---
     window.toggleMemberList = () => document.getElementById('memberList').classList.toggle('open');
-    window.openAdminSettings = () => {
-        document.getElementById('modalOverlay').style.display = 'block';
-        document.getElementById('adminModal').style.display = 'block';
-    };
-    window.closeAdminSettings = () => {
-        document.getElementById('modalOverlay').style.display = 'none';
-        document.getElementById('adminModal').style.display = 'none';
-    };
+    window.openAdminSettings = () => { document.getElementById('modalOverlay').style.display = 'block'; document.getElementById('adminModal').style.display = 'block'; };
+    window.closeAdminSettings = () => { document.getElementById('modalOverlay').style.display = 'none'; document.getElementById('adminModal').style.display = 'none'; };
     window.saveAdminSettings = () => {
-        const s = {
-            gradient: document.getElementById('gradientToggle').checked,
-            animate: document.getElementById('animateToggle').checked,
-            bubbleColor: document.getElementById('bubbleColorInput').value,
-            nameColor: document.getElementById('nameColorInput').value
-        };
-        update(ref(database, 'adminSettings/global'), s);
-        closeAdminSettings();
+      const s = {
+        gradient: document.getElementById('gradientToggle').checked,
+        animate: document.getElementById('animateToggle').checked,
+        bubbleColor: document.getElementById('bubbleColorInput').value,
+        nameColor: document.getElementById('nameColorInput').value
+      };
+      update(ref(database, 'adminSettings/global'), s);
+      closeAdminSettings();
     };
 
-    function updateStatus(online) { 
-        if(currentUser) set(ref(database, `online/${currentUser.uid}`), { 
-            username: currentUsername, 
-            isOnline: online, 
-            lastSeen: serverTimestamp() 
-        }); 
+    function updateStatus(online) {
+      if(currentUser) set(ref(database, `online/${currentUser.uid}`), { username: currentUsername, isOnline: online, lastSeen: serverTimestamp() });
     }
     
     document.getElementById("messageInput").addEventListener("keypress", (e) => { if(e.key === 'Enter') sendMessage(); });
     window.onbeforeunload = () => updateStatus(false);
   </script>
-  
   <script src="particles.js"></script>
 </body>
 </html>
