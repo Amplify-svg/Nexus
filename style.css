@@ -3,181 +3,29 @@
 
 body { 
     font-family: 'Segoe UI', Arial, sans-serif; 
-    background: #ffffff; /* FIXED: Changed from #f5f5f5 to white */
+    background: #ffffff; /* Light Mode: White */
     color: #333;
     transition: background 0.3s, color 0.3s; 
-    overflow-x: hidden; 
     min-height: 100vh;
 }
 
-#particleCanvas { 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    z-index: -1; 
-    pointer-events: none; 
-}
-
-/* --- HEADER --- */
-.header { 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 60px; 
-    background: rgba(255, 255, 255, 0.9); 
-    backdrop-filter: blur(10px); 
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+/* Header fixes for username display */
+.user-info { 
+    margin-left: auto; 
     display: flex; 
     align-items: center; 
-    padding: 0 20px; 
-    z-index: 1000; 
+    gap: 12px; 
+    color: inherit; 
 }
 
-.hamburger { 
-    width: 30px; 
-    height: 20px; 
-    cursor: pointer; 
-    display: flex; 
-    flex-direction: column; 
-    justify-content: space-between; 
-}
-
-.hamburger span { width: 100%; height: 3px; background: #333; border-radius: 2px; transition: 0.3s; }
-
-.user-info { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-
-.avatar { 
-    width: 38px; 
-    height: 38px; 
-    border-radius: 50%; 
-    background: #4285f4; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    color: white; 
-    font-weight: bold; 
-    box-shadow: 0 2px 5px rgba(66, 133, 244, 0.3);
-}
-
-/* --- SIDEBAR --- */
-.sidebar { 
-    position: fixed; 
-    top: 0; 
-    left: -280px; 
-    width: 280px; 
-    height: 100vh; 
-    background: white; 
-    box-shadow: 5px 0 15px rgba(0,0,0,0.1); 
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-    z-index: 2000; 
-    display: flex; 
-    flex-direction: column; 
-}
-
-.sidebar.open { left: 0; }
-
-.sidebar-header { 
-    padding: 30px 25px; 
-    background: #4285f4; 
-    color: white; 
-    font-size: 22px; 
-    font-weight: bold; 
-    letter-spacing: 1px;
-}
-
-.nav-items { 
-    flex: 1; 
-    padding: 20px 0; 
-    display: flex; 
-    flex-direction: column; 
-}
-
-.nav-item { 
-    padding: 15px 25px; 
-    cursor: pointer; 
-    transition: all 0.2s; 
-    font-size: 16px; 
-    color: #444; 
-    display: flex; 
-    align-items: center; 
-    gap: 15px; 
-    text-decoration: none;
-}
-
-.nav-item:hover { 
-    background: #f0f7ff; 
-    color: #4285f4; 
-    padding-left: 35px; 
-}
-
-.sidebar-footer { padding: 20px; border-top: 1px solid #eee; }
-
-.footer-btn { 
-    width: 100%; 
-    padding: 12px; 
-    border: none; 
-    border-radius: 8px; 
-    cursor: pointer; 
-    font-size: 14px; 
+#headerUserName {
+    font-size: 14px;
     font-weight: 600;
+    display: block; /* Ensures it takes space */
 }
 
-.logout-btn { background: #feecef; color: #ea4335; transition: 0.2s; }
-.logout-btn:hover { background: #ea4335; color: white; }
-
-/* --- OVERLAY --- */
-.overlay { 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
-    background: rgba(0,0,0,0.4); 
-    opacity: 0; 
-    pointer-events: none; 
-    transition: opacity 0.3s; 
-    z-index: 1500; 
-}
-.overlay.active { opacity: 1; pointer-events: all; }
-
-/* --- CONTENT CONTAINERS --- */
-.container, .settings-page, #chatContainer { 
-    margin-top: 100px !important; 
-    position: relative; 
-    z-index: 10; 
-}
-
-/* Glass Effect for Boxes */
-.auth-box, .settings-section { 
-    background: rgba(255, 255, 255, 0.9); 
-    padding: 30px; 
-    border-radius: 12px; 
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.3);
-}
-
-/* --- DARK MODE --- */
+/* Dark Mode */
 body.dark-mode { background: #0a0a0a; color: #eee; }
-
 body.dark-mode .header { background: rgba(20, 20, 20, 0.9); border-bottom: 1px solid #333; }
-body.dark-mode .hamburger span { background: #eee; }
 
-body.dark-mode .sidebar { background: #1a1a1a; box-shadow: 5px 0 15px rgba(0,0,0,0.5); }
-body.dark-mode .nav-item { color: #ccc; }
-body.dark-mode .nav-item:hover { background: #252525; color: #4285f4; }
-body.dark-mode .sidebar-footer { border-top: 1px solid #333; }
-
-body.dark-mode .auth-box, 
-body.dark-mode .settings-section { 
-    background: rgba(30, 30, 30, 0.8); 
-    color: white; 
-    border: 1px solid #444;
-}
-
-body.dark-mode input { 
-    background: #2a2a2a; 
-    color: white; 
-    border: 1px solid #444; 
-}
+/* ... (Keep the rest of your sidebar and particle styles) ... */
