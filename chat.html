@@ -62,7 +62,7 @@
     #messageInput { flex: 1; padding: 12px 20px; border-radius: 30px; border: 1px solid #ddd; outline: none; }
     body.dark-mode #messageInput { background: #111; color: white; border-color: #444; }
 
-    /* Member List Drawer */
+    /* Drawers and Modals */
     #memberList {
       position: fixed; right: -320px; top: 0; width: 300px; height: 100vh;
       background: white; border-left: 1px solid #ddd; transition: 0.3s; z-index: 4000; padding: 20px;
@@ -70,7 +70,15 @@
     }
     body.dark-mode #memberList { background: #1a1a1a; border-left: 1px solid #333; color: white; }
     #memberList.open { right: 0; }
-    .member-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(128,128,128,0.2); }
+
+    .admin-modal {
+      display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); 
+      background:#222; color:white; padding:30px; border-radius:12px; z-index:5001; 
+      border:1px solid #444; width:350px; max-height: 80vh; overflow-y: auto;
+    }
+    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:5000; }
+
+    .member-item, .ban-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(128,128,128,0.2); }
   </style>
 </head>
 <body>
@@ -84,18 +92,26 @@
     <div id="memberListContent" style="overflow-y:auto; flex:1;"></div>
   </div>
 
-  <div id="adminModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#222; color:white; padding:30px; border-radius:12px; z-index:5001; border:1px solid #444; width:320px;">
-    <h3 style="margin-bottom:15px;">Admin Global Style</h3>
+  <div id="adminModal" class="admin-modal">
+    <h3 style="margin-bottom:15px;">Admin Style</h3>
     <input type="color" id="bubbleColorInput" style="width:100%; height:40px; margin-bottom:10px;">
     <input type="color" id="nameColorInput" style="width:100%; height:40px; margin-bottom:10px;">
     <label><input type="checkbox" id="gradientToggle"> Gradient</label><br>
     <label><input type="checkbox" id="animateToggle"> Animation</label><br><br>
     <button onclick="saveAdminSettings()" style="width:100%; padding:10px; background:#4285f4; border:none; color:white; border-radius:5px; font-weight:bold; cursor:pointer;">SAVE</button>
   </div>
-  <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:5000;" onclick="closeAdminSettings()"></div>
+
+  <div id="banManagerModal" class="admin-modal">
+    <h3 style="margin-bottom:15px;">Manage Bans/Mutes</h3>
+    <div id="banListContent"></div>
+    <button onclick="closeBanManager()" style="width:100%; margin-top:20px; padding:10px; background:#444; border:none; color:white; border-radius:5px; cursor:pointer;">CLOSE</button>
+  </div>
+
+  <div id="modalOverlay" class="modal-overlay" onclick="closeAllModals()"></div>
 
   <div id="topActions" style="position: fixed; top: 75px; right: 20px; z-index: 10; display: flex; gap: 10px;">
     <button id="adminClearBtn" onclick="clearChat()" style="display:none; background:#ea4335; border:none; color:white; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">CLEAR CHAT</button>
+    <button id="adminBanBtn" onclick="openBanManager()" style="display:none; background:#ff8800; border:none; color:white; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">BANS</button>
     <button onclick="toggleMemberList()" style="background:#4285f4; border:none; color:white; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">👥 MEMBERS</button>
     <button id="adminSettingsBtn" onclick="openAdminSettings()" style="display:none; background:#333; border:none; color:white; padding:8px 12px; border-radius:5px; cursor:pointer;">⚙️</button>
   </div>
@@ -150,42 +166,39 @@
         }
 
         document.getElementById('adminClearBtn').style.display = isAdmin ? 'block' : 'none';
+        document.getElementById('adminBanBtn').style.display = isAdmin ? 'block' : 'none';
         document.getElementById('adminSettingsBtn').style.display = isAdmin ? 'block' : 'none';
         document.getElementById('messageInput').disabled = isBanned;
         document.getElementById('messageInput').placeholder = isBanned ? "MUTED" : "Type a message...";
         
-        updateStatus(true);
+        updateStatus();
       });
 
       onValue(ref(database, 'adminSettings/global'), (s) => { if(s.exists()) adminSettings = s.val(); });
-      
       setupChat();
       setupTypingLogic();
     });
 
-    function updateStatus(online) {
+    // --- FIX: Online Status (Deletes entry on exit) ---
+    function updateStatus() {
       if (!currentUser) return;
       const statusRef = ref(database, `online/${currentUser.uid}`);
-      if (online) {
-        set(statusRef, { username: currentUsername, isOnline: true, lastSeen: serverTimestamp() });
-        onDisconnect(statusRef).set({ username: currentUsername, isOnline: false, lastSeen: serverTimestamp() });
-      }
+      set(statusRef, { username: currentUsername, timestamp: serverTimestamp() });
+      // This REMOVES the user from the list the instant they close the tab
+      onDisconnect(statusRef).remove();
     }
 
     function setupChat() {
       const messagesRef = query(ref(database, 'messages'), orderByChild('timestamp'));
-      const chatBox = document.getElementById("chatBox");
-
       onChildAdded(messagesRef, (s) => {
         renderMessage(s.key, s.val());
-        chatBox.scrollTop = chatBox.scrollHeight;
+        const cb = document.getElementById("chatBox");
+        cb.scrollTop = cb.scrollHeight;
       });
-
       onChildRemoved(ref(database, 'messages'), (s) => {
         const el = document.getElementById(`msg-${s.key}`);
         if (el) el.remove();
       });
-
       onValue(ref(database, 'online'), (snap) => {
           updateMemberList(snap.val() || {});
       });
@@ -209,7 +222,6 @@
       userSpan.textContent = isOwn ? "You" : msg.username;
       if (msg.isAdminMsg && msg.style?.nameColor) userSpan.style.color = msg.style.nameColor;
 
-      // --- Admin Tooltip with Ban ---
       if (isAdmin && !isOwn) {
         const tooltip = document.createElement("div");
         tooltip.className = "admin-tooltip";
@@ -225,7 +237,6 @@
 
       const textDiv = document.createElement("div");
       textDiv.textContent = msg.text;
-
       if (isAdmin || isOwn) {
         const del = document.createElement("span");
         del.style = "margin-left:8px; cursor:pointer; opacity:0.5;";
@@ -233,13 +244,13 @@
         del.onclick = () => remove(ref(database, `messages/${id}`));
         textDiv.appendChild(del);
       }
-
       div.append(userSpan, textDiv);
       document.getElementById("chatBox").appendChild(div);
     }
 
     function setupTypingLogic() {
       const input = document.getElementById('messageInput');
+      let typingTimeout;
       input.addEventListener('input', () => {
         if (currentUser) {
           set(ref(database, `typing/${currentUser.uid}`), { username: currentUsername });
@@ -247,7 +258,6 @@
           typingTimeout = setTimeout(() => set(ref(database, `typing/${currentUser.uid}`), null), 2000);
         }
       });
-      let typingTimeout;
       onValue(ref(database, 'typing'), (snap) => {
         const data = snap.val() || {};
         const names = Object.entries(data).filter(([uid]) => uid !== currentUser.uid).map(([_, u]) => u.username);
@@ -257,41 +267,71 @@
 
     async function updateMemberList(onlineData) {
       const content = document.getElementById('memberListContent');
-      const activeUids = Object.entries(onlineData).filter(([_, d]) => d.isOnline);
-      
-      const memberPromises = activeUids.map(async ([uid, data]) => {
+      const uids = Object.keys(onlineData);
+      const memberPromises = uids.map(async (uid) => {
         const userSnap = await get(child(ref(database), `users/${uid}`));
-        const isMuted = userSnap.val()?.isBanned === true;
+        const userData = userSnap.val() || {};
+        const isMuted = userData.isBanned === true;
         const div = document.createElement('div');
         div.className = 'member-item';
-        div.innerHTML = `<div class="member-name">${data.username} ${isMuted ? '<span style="color:#ff8800; font-size:10px;">[MUTED]</span>' : ''}</div>`;
-        
+        div.innerHTML = `<div class="member-name">${userData.username || onlineData[uid].username} ${isMuted ? '<span style="color:#ff8800; font-size:10px;">[MUTED]</span>' : ''}</div>`;
         if (isAdmin && uid !== currentUser.uid) {
           const btnGroup = document.createElement('div');
-          btnGroup.style.display = 'flex';
-          btnGroup.style.gap = '5px';
-
+          btnGroup.style.display = 'flex'; btnGroup.style.gap = '5px';
           const muteBtn = document.createElement('button');
           muteBtn.textContent = isMuted ? 'UNMUTE' : 'MUTE';
           muteBtn.style = "background:#666; color:white; border:none; padding:4px 8px; font-size:10px; cursor:pointer; border-radius:4px;";
           muteBtn.onclick = () => adminMute(uid);
-
           const banBtn = document.createElement('button');
           banBtn.textContent = 'BAN';
           banBtn.style = "background:#ea4335; color:white; border:none; padding:4px 8px; font-size:10px; cursor:pointer; border-radius:4px;";
           banBtn.onclick = () => adminBan(uid);
-
           btnGroup.append(muteBtn, banBtn);
           div.appendChild(btnGroup);
         }
         return div;
       });
-
       const memberEls = await Promise.all(memberPromises);
       content.innerHTML = '';
       memberEls.forEach(el => content.appendChild(el));
-      document.getElementById('onlineCount').textContent = activeUids.length;
+      document.getElementById('onlineCount').textContent = uids.length;
     }
+
+    // --- Ban Manager Functions ---
+    window.openBanManager = async () => {
+      document.getElementById('modalOverlay').style.display = 'block';
+      document.getElementById('banManagerModal').style.display = 'block';
+      const list = document.getElementById('banListContent');
+      list.innerHTML = "Loading...";
+
+      const usersSnap = await get(ref(database, 'users'));
+      list.innerHTML = "";
+      let found = false;
+
+      usersSnap.forEach((childSnap) => {
+        const u = childSnap.val();
+        const uid = childSnap.key;
+        if (u.isBanned || u.kicked) {
+          found = true;
+          const div = document.createElement('div');
+          div.className = 'ban-item';
+          div.innerHTML = `
+            <div>
+              <div style="font-weight:bold;">${u.username}</div>
+              <div style="font-size:10px; color:#888;">${u.kicked ? 'PERMA-BANNED' : 'MUTED'}</div>
+            </div>
+            <button onclick="unbanUser('${uid}')" style="background:#4285f4; border:none; color:white; padding:5px 10px; border-radius:4px; font-size:10px; cursor:pointer;">RESTORE</button>
+          `;
+          list.appendChild(div);
+        }
+      });
+      if (!found) list.innerHTML = "No banned users found.";
+    };
+
+    window.unbanUser = async (uid) => {
+      await update(ref(database, `users/${uid}`), { kicked: false, isBanned: false });
+      openBanManager(); // Refresh list
+    };
 
     window.adminMute = async (uid) => {
       const s = await get(child(ref(database), `users/${uid}`));
@@ -299,24 +339,17 @@
     };
 
     window.adminBan = (uid) => {
-      if(confirm("Kick and permanently ban this user?")) {
-        update(ref(database, `users/${uid}`), { kicked: true });
-      }
+      if(confirm("Kick and permanently ban this user?")) update(ref(database, `users/${uid}`), { kicked: true });
     };
 
     window.clearChat = () => { if(confirm("Clear chat?")) remove(ref(database, 'messages')); };
-
+    
     window.sendMessage = () => {
       const input = document.getElementById("messageInput");
       if(!input.value.trim() || isBanned) return;
       push(ref(database, 'messages'), {
-        text: input.value,
-        username: currentUsername,
-        userId: currentUser.uid,
-        email: currentUser.email,
-        isAdminMsg: isAdmin,
-        style: isAdmin ? adminSettings : null,
-        timestamp: serverTimestamp()
+        text: input.value, username: currentUsername, userId: currentUser.uid,
+        email: currentUser.email, isAdminMsg: isAdmin, style: isAdmin ? adminSettings : null, timestamp: serverTimestamp()
       });
       input.value = "";
       set(ref(database, `typing/${currentUser.uid}`), null);
@@ -324,7 +357,11 @@
 
     window.toggleMemberList = () => document.getElementById('memberList').classList.toggle('open');
     window.openAdminSettings = () => { document.getElementById('modalOverlay').style.display = 'block'; document.getElementById('adminModal').style.display = 'block'; };
-    window.closeAdminSettings = () => { document.getElementById('modalOverlay').style.display = 'none'; document.getElementById('adminModal').style.display = 'none'; };
+    window.closeAllModals = () => { 
+      document.querySelectorAll('.admin-modal, .modal-overlay').forEach(el => el.style.display = 'none'); 
+    };
+    window.closeBanManager = () => closeAllModals();
+    window.closeAdminSettings = () => closeAllModals();
     window.saveAdminSettings = () => {
       update(ref(database, 'adminSettings/global'), {
         gradient: document.getElementById('gradientToggle').checked,
@@ -332,7 +369,7 @@
         bubbleColor: document.getElementById('bubbleColorInput').value,
         nameColor: document.getElementById('nameColorInput').value
       });
-      closeAdminSettings();
+      closeAllModals();
     };
 
     document.getElementById("messageInput").addEventListener("keypress", (e) => { if(e.key === 'Enter') sendMessage(); });
