@@ -26,7 +26,6 @@
       border: 1px solid rgba(0, 0, 0, 0.1);
     }
 
-    /* Dark mode override for settings sections */
     body.dark-mode .settings-section {
       background: rgba(30, 30, 30, 0.6);
       border: 1px solid #333;
@@ -59,21 +58,32 @@
 
     .appearance-toggle { display: flex; gap: 10px; margin-top: 15px; }
     .toggle-option {
-      flex: 1;
-      padding: 12px;
-      background: rgba(128, 128, 128, 0.1);
-      border: 1px solid rgba(128, 128, 128, 0.3);
-      color: #888;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-      transition: 0.3s;
+      flex: 1; padding: 12px; background: rgba(128, 128, 128, 0.1);
+      border: 1px solid rgba(128, 128, 128, 0.3); color: #888;
+      border-radius: 8px; cursor: pointer; text-align: center; transition: 0.3s;
     }
     .toggle-option.active {
-      background: rgba(66, 133, 244, 0.2);
-      border-color: #4285f4;
-      color: #4285f4;
+      background: rgba(66, 133, 244, 0.2); border-color: #4285f4; color: #4285f4;
     }
+
+    /* Danger Zone Styling */
+    .danger-section { border: 1px solid rgba(234, 67, 53, 0.3) !important; }
+    
+    .danger-btn {
+      width: 100%; padding: 12px; border-radius: 8px; font-weight: bold;
+      cursor: pointer; transition: 0.3s; margin-top: 10px; border: 1px solid transparent;
+    }
+    
+    .logout-btn-full {
+      background: rgba(234, 67, 53, 0.1); color: #ea4335; border-color: #ea4335;
+    }
+    .logout-btn-full:hover { background: #ea4335; color: white; }
+
+    .delete-btn {
+      background: transparent; color: #888; font-size: 12px; border: none;
+      margin-top: 15px; text-decoration: underline; opacity: 0.6;
+    }
+    .delete-btn:hover { color: #ea4335; opacity: 1; }
   </style>
 </head>
 <body>
@@ -103,14 +113,6 @@
         </div>
         <button class="edit-btn" id="editUserBtn">Edit</button>
       </div>
-
-      <div class="settings-item">
-        <div>
-          <div class="settings-label">Password</div>
-          <div class="settings-value">••••••••</div>
-        </div>
-        <button class="edit-btn" id="changePassBtn">Change</button>
-      </div>
     </div>
 
     <div class="settings-section">
@@ -120,12 +122,23 @@
         <div class="toggle-option" id="darkMode">🌙 Dark</div>
       </div>
     </div>
+
+    <div class="settings-section danger-section">
+      <div class="settings-label" style="color: #ea4335;">Danger Zone</div>
+      <p style="font-size: 12px; color: #888; margin-top: 5px;">Manage your active session or permanently remove your data.</p>
+      
+      <button class="danger-btn logout-btn-full" id="fullLogoutBtn">LOGOUT FROM NEXUS</button>
+      
+      <div style="text-align: center;">
+        <button class="delete-btn" id="deleteAccountBtn">Delete Account Permanently</button>
+      </div>
+    </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getDatabase, ref, get, update, child } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getAuth, onAuthStateChanged, signOut, deleteUser } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getDatabase, ref, get, update, child, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
@@ -142,6 +155,7 @@
     const database = getDatabase(app);
 
     let currentUser = null;
+    let currentUsername = "";
     let storedEmail = "";
 
     onAuthStateChanged(auth, async user => {
@@ -155,31 +169,57 @@
       const data = snap.val() || {};
       
       storedEmail = data.email || user.email;
-      // Matches your database path specifically
-      const currentUsername = data.username || "User";
+      currentUsername = data.username || "User";
       
-      // Save locally and update UI
       localStorage.setItem('userName', currentUsername);
       document.getElementById('usernameDisplay').textContent = currentUsername;
       
-      // Signal global.js to update the header
       window.dispatchEvent(new Event('nameUpdated'));
       
-      if (data.appearance === "dark") {
-          updateUIAppearance("dark");
-      } else {
-          updateUIAppearance("light");
-      }
+      updateUIAppearance(data.appearance === "dark" ? "dark" : "light");
     });
 
+    // --- LOGOUT LOGIC ---
+    document.getElementById('fullLogoutBtn').onclick = async () => {
+        if (confirm("Are you sure you want to logout?")) {
+            localStorage.clear();
+            sessionStorage.clear();
+            await signOut(auth);
+            window.location.replace("Home.html");
+        }
+    };
+
+    // --- DELETE ACCOUNT LOGIC ---
+    document.getElementById('deleteAccountBtn').onclick = async () => {
+        const confirmation = prompt(`To delete your account, type your username (${currentUsername}) below:`);
+        
+        if (confirmation === currentUsername) {
+            try {
+                // 1. Remove from Realtime Database
+                await remove(ref(database, `users/${currentUser.uid}`));
+                
+                // 2. Delete Auth User
+                await deleteUser(currentUser);
+                
+                localStorage.clear();
+                alert("Account successfully deleted.");
+                window.location.replace("Home.html");
+            } catch (err) {
+                alert("For security, you must have logged in recently to delete your account. Please log out and back in, then try again.");
+            }
+        } else if (confirmation !== null) {
+            alert("Username incorrect. Deletion cancelled.");
+        }
+    };
+
+    // --- UI & THEME LOGIC ---
     function updateUIAppearance(mode) {
-      const body = document.body;
       if (mode === 'dark') {
-        body.classList.add('dark-mode');
+        document.body.classList.add('dark-mode');
         document.getElementById('darkMode').classList.add('active');
         document.getElementById('lightMode').classList.remove('active');
       } else {
-        body.classList.remove('dark-mode');
+        document.body.classList.remove('dark-mode');
         document.getElementById('lightMode').classList.add('active');
         document.getElementById('darkMode').classList.remove('active');
       }
@@ -201,7 +241,6 @@
       if (name) {
         await update(ref(database, `users/${currentUser.uid}`), { username: name });
         localStorage.setItem('userName', name); 
-        // Signal global.js to refresh the top-right header
         window.dispatchEvent(new Event('nameUpdated'));
         location.reload();
       }
