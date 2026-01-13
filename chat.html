@@ -28,6 +28,28 @@
     .message.other { background: #e0e0e0; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; }
     body.dark-mode .message.other { background: #333; color: white; }
 
+    /* MEDIA STYLES (New) */
+    .chat-media {
+        display: block; max-width: 100%; max-height: 250px;
+        margin-top: 8px; border-radius: 8px; cursor: pointer;
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    /* MEDIA MODAL (New) */
+    #mediaModal {
+        display: none; position: fixed; inset: 0; 
+        background: rgba(0,0,0,0.95); z-index: 9999; 
+        align-items: center; justify-content: center;
+    }
+    #mediaModal img, #mediaModal video {
+        max-width: 95%; max-height: 95%; border-radius: 8px;
+        box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+    #mediaModal .close-btn {
+        position: absolute; top: 20px; right: 30px; 
+        color: white; font-size: 40px; cursor: pointer; z-index: 10000;
+    }
+
     /* Admin Specials */
     .message.admin-gradient {
       background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
@@ -86,6 +108,12 @@
   <canvas id="particleCanvas"></canvas>
   <script src="global.js"></script>
 
+  <div id="mediaModal">
+      <div class="close-btn" onclick="closeMediaModal()">&times;</div>
+      <img id="modalImg" alt="Expanded" style="display:none;">
+      <video id="modalVideo" controls style="display:none;"></video>
+  </div>
+
   <div id="memberList">
     <button style="background:none; border:none; font-size:24px; cursor:pointer; color:inherit; align-self:flex-end;" onclick="toggleMemberList()">×</button>
     <h3 style="margin-bottom:15px;">Online Members (<span id="onlineCount">0</span>)</h3>
@@ -120,6 +148,9 @@
   <div id="typingIndicator"></div>
 
   <div id="messageInputBox">
+    <label for="fileInput" style="cursor:pointer; font-size:24px; padding: 0 10px; color: #4285f4;">📷</label>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
+    
     <input id="messageInput" type="text" placeholder="Type a message..." autocomplete="off">
     <button id="sendBtn" onclick="sendMessage()" style="padding:12px 25px; background:#4285f4; color:white; border:none; border-radius:30px; cursor:pointer; font-weight:bold;">Send</button>
   </div>
@@ -177,14 +208,13 @@
       onValue(ref(database, 'adminSettings/global'), (s) => { if(s.exists()) adminSettings = s.val(); });
       setupChat();
       setupTypingLogic();
+      setupFileUpload(); // New Function call
     });
 
-    // --- FIX: Online Status (Deletes entry on exit) ---
     function updateStatus() {
       if (!currentUser) return;
       const statusRef = ref(database, `online/${currentUser.uid}`);
       set(statusRef, { username: currentUsername, timestamp: serverTimestamp() });
-      // This REMOVES the user from the list the instant they close the tab
       onDisconnect(statusRef).remove();
     }
 
@@ -202,6 +232,42 @@
       onValue(ref(database, 'online'), (snap) => {
           updateMemberList(snap.val() || {});
       });
+    }
+
+    // --- Media Sending Logic ---
+    function setupFileUpload() {
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', function(e) {
+            if (isBanned) { alert("You are muted."); return; }
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Simple size check (2MB limit for RTDB safety)
+            if (file.size > 2 * 1024 * 1024) {
+                alert("File too large. Please send images/videos under 2MB.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const base64 = evt.target.result;
+                const type = file.type.startsWith('video') ? 'video' : 'image';
+                
+                push(ref(database, 'messages'), {
+                    username: currentUsername,
+                    userId: currentUser.uid,
+                    email: currentUser.email,
+                    isAdminMsg: isAdmin,
+                    style: isAdmin ? adminSettings : null,
+                    timestamp: serverTimestamp(),
+                    media: base64, // The image data
+                    mediaType: type
+                });
+            };
+            reader.readAsDataURL(file);
+            // Clear input so same file can be selected again
+            fileInput.value = ""; 
+        });
     }
 
     async function renderMessage(id, msg) {
@@ -235,16 +301,31 @@
         userSpan.appendChild(tooltip);
       }
 
-      const textDiv = document.createElement("div");
-      textDiv.textContent = msg.text;
+      const contentDiv = document.createElement("div");
+      
+      // Text Content
+      if (msg.text) {
+          contentDiv.textContent = msg.text;
+      }
+
+      // Media Content (Image/Video)
+      if (msg.media) {
+          const mediaEl = document.createElement(msg.mediaType === 'video' ? 'video' : 'img');
+          mediaEl.src = msg.media;
+          mediaEl.className = 'chat-media';
+          mediaEl.onclick = () => openMediaModal(msg.media, msg.mediaType);
+          contentDiv.appendChild(mediaEl);
+      }
+
       if (isAdmin || isOwn) {
         const del = document.createElement("span");
-        del.style = "margin-left:8px; cursor:pointer; opacity:0.5;";
+        del.style = "margin-left:8px; cursor:pointer; opacity:0.5; float:right;";
         del.innerHTML = "&times;";
-        del.onclick = () => remove(ref(database, `messages/${id}`));
-        textDiv.appendChild(del);
+        del.onclick = (e) => { e.stopPropagation(); remove(ref(database, `messages/${id}`)); };
+        contentDiv.appendChild(del);
       }
-      div.append(userSpan, textDiv);
+      
+      div.append(userSpan, contentDiv);
       document.getElementById("chatBox").appendChild(div);
     }
 
@@ -353,6 +434,32 @@
       });
       input.value = "";
       set(ref(database, `typing/${currentUser.uid}`), null);
+    };
+
+    // --- Media Modal Logic ---
+    window.openMediaModal = (src, type) => {
+        const modal = document.getElementById('mediaModal');
+        const img = document.getElementById('modalImg');
+        const video = document.getElementById('modalVideo');
+        
+        modal.style.display = 'flex';
+        
+        if (type === 'video') {
+            img.style.display = 'none';
+            video.style.display = 'block';
+            video.src = src;
+        } else {
+            video.style.display = 'none';
+            video.pause();
+            img.style.display = 'block';
+            img.src = src;
+        }
+    };
+
+    window.closeMediaModal = () => {
+        const modal = document.getElementById('mediaModal');
+        modal.style.display = 'none';
+        document.getElementById('modalVideo').pause();
     };
 
     window.toggleMemberList = () => document.getElementById('memberList').classList.toggle('open');
