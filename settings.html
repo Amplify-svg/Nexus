@@ -176,7 +176,7 @@
     // --- Auth State Monitor ---
     onAuthStateChanged(auth, async user => {
       if (!user) {
-        window.location.href = "Home.html";
+        window.location.href = "rpg.html";
         return;
       }
       currentUser = user;
@@ -239,7 +239,7 @@
             localStorage.clear();
             sessionStorage.clear();
             await signOut(auth);
-            window.location.replace("Home.html");
+            window.location.replace("rpg.html");
         }
     };
 
@@ -253,7 +253,7 @@
                 await remove(ref(database, `users/${uid}`)); // Wipe DB entry
                 await deleteUser(currentUser);              // Wipe Auth entry
                 localStorage.clear();
-                window.location.replace("Home.html");
+                window.location.replace("rpg.html");
             } catch (err) {
                 alert("Sensitive Action: Please re-login to Nexus and try deleting again immediately.");
             }
