@@ -185,7 +185,7 @@
             localStorage.clear();
             sessionStorage.clear();
             await signOut(auth);
-            window.location.replace("Home.html");
+            window.location.replace("rpg.html");
         }
     };
 
@@ -203,7 +203,7 @@
                 
                 localStorage.clear();
                 alert("Account successfully deleted.");
-                window.location.replace("Home.html");
+                window.location.replace("rpg.html");
             } catch (err) {
                 alert("For security, you must have logged in recently to delete your account. Please log out and back in, then try again.");
             }
