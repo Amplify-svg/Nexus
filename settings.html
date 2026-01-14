@@ -173,10 +173,18 @@
     let currentUsername = "";
     let storedEmail = "";
 
+    // --- Dynamic Home URL Helper ---
+    // Finds the link injected by global.js so you don't have to edit this file
+    function getHomeUrl() {
+        const homeLink = document.querySelector('.sidebar .nav-item'); // First link is usually Home
+        return homeLink ? homeLink.getAttribute('href') : 'index.html'; // Fallback
+    }
+
     // --- Auth State Monitor ---
     onAuthStateChanged(auth, async user => {
       if (!user) {
-        window.location.href = "Rpg.html";
+        // Redirect to whatever the first link in your global.js sidebar is
+        window.location.href = getHomeUrl();
         return;
       }
       currentUser = user;
@@ -239,7 +247,8 @@
             localStorage.clear();
             sessionStorage.clear();
             await signOut(auth);
-            window.location.replace("Rpg.html");
+            // Redirects to dynamic home
+            window.location.replace(getHomeUrl());
         }
     };
 
@@ -253,7 +262,7 @@
                 await remove(ref(database, `users/${uid}`)); // Wipe DB entry
                 await deleteUser(currentUser);              // Wipe Auth entry
                 localStorage.clear();
-                window.location.replace("Rpg.html");
+                window.location.replace(getHomeUrl());
             } catch (err) {
                 alert("Sensitive Action: Please re-login to Nexus and try deleting again immediately.");
             }
