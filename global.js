@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">NEXUS</div>
             <div class="nav-items">
-                <a href="Rpg.html" class="nav-item">🏠 Home</a>
+                <a href="Serendipity.html" class="nav-item">🏠 Home</a>
                 <a href="chat.html" class="nav-item">💬 Chat</a>
                 <a href="call.html" class="nav-item">📞 Video Call</a>
                 <a href="research.html" class="nav-item">🌐 Research Portal</a>
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Logout Visibility Logic ---
     // Shows button only on Home.html or root
-    const isHomePage = window.location.pathname.endsWith('Home.html') || window.location.pathname === '/' || window.location.pathname.endsWith('index.html');
+    const isHomePage = window.location.pathname.endsWith('Serendipity.html') || window.location.pathname === '/' || window.location.pathname.endsWith('index.html');
     if (logoutBtn && isHomePage) {
         logoutBtn.style.display = 'block';
     }
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.logout();
         } else {
             // Fallback if auth.js isn't loaded/ready
-            window.location.replace("Home.html");
+            window.location.replace("Serendipity.html");
         }
     };
 });
