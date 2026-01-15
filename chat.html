@@ -69,7 +69,7 @@
     .card-bio { font-size: 14px; color: #666; font-style: italic; margin-top: 10px; }
     body.dark-mode .card-bio { color: #bbb; }
 
-    /* Admin Specials */
+    /* Admin Specials & Tooltip */
     .message.admin-gradient {
       background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
       background-size: 300% 300%;
@@ -78,13 +78,21 @@
     }
     .message.admin-gradient.animate { animation: gradientShift 6s ease infinite; }
 
+    .message-user { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; position: relative; cursor: pointer; }
+    .message-user:hover { text-decoration: underline; }
+    .admin-viewable { text-decoration: underline dotted #4285f4; cursor: help; }
+
+    .admin-tooltip {
+      visibility: hidden; width: 180px; background-color: #222; color: #fff;
+      text-align: center; border-radius: 6px; padding: 10px;
+      position: absolute; z-index: 100; bottom: 125%; left: 0;
+      opacity: 0; transition: opacity 0.2s; border: 1px solid #444; font-weight: normal; font-size: 11px;
+    }
+    .message-user:hover .admin-tooltip { visibility: visible; opacity: 1; }
+
     @keyframes messageFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     @keyframes modalPop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
-
-    .message-user { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; position: relative; cursor: pointer; }
-    .message-user:hover { text-decoration: underline; }
-    .admin-viewable { text-decoration: underline dotted #4285f4; }
 
     /* Input Bar */
     #messageInputBox {
@@ -299,9 +307,24 @@
       const userSpan = document.createElement("span");
       userSpan.className = "message-user" + (isAdmin ? " admin-viewable" : "");
       userSpan.textContent = isOwn ? "You" : msg.username;
-      userSpan.onclick = () => showProfile(msg.userId); // PROFILE TRIGGER
+      userSpan.onclick = () => showProfile(msg.userId); 
       
       if (msg.isAdminMsg && msg.style?.nameColor) userSpan.style.color = msg.style.nameColor;
+
+      // --- ADMIN TOOLTIP RE-ADDED ---
+      if (isAdmin && !isOwn) {
+        const tooltip = document.createElement("div");
+        tooltip.className = "admin-tooltip";
+        tooltip.onclick = (e) => e.stopPropagation(); // Don't trigger profile card when clicking tooltip buttons
+        tooltip.innerHTML = `
+          <b style="color:#4285f4">${msg.email || 'No email'}</b><br>
+          <div style="display:flex; gap:5px; justify-content:center; margin-top:8px;">
+            <button style="background:#ff8800; border:none; color:white; padding:5px; border-radius:4px; font-size:9px; cursor:pointer;" onclick="adminMute('${msg.userId}')">MUTE</button>
+            <button style="background:#ea4335; border:none; color:white; padding:5px; border-radius:4px; font-size:9px; cursor:pointer;" onclick="adminBan('${msg.userId}')">BAN</button>
+          </div>
+        `;
+        userSpan.appendChild(tooltip);
+      }
 
       const contentDiv = document.createElement("div");
       if (msg.text) contentDiv.textContent = msg.text;
@@ -332,6 +355,7 @@
         if (snap.exists()) {
             const data = snap.val();
             document.getElementById('cardName').textContent = data.username || "User";
+            // Admins can see the email on the profile card too
             document.getElementById('cardEmail').textContent = isAdmin ? (data.email || "") : "";
             document.getElementById('cardBio').textContent = data.bio ? `"${data.bio}"` : "No bio yet.";
             document.getElementById('cardPfp').src = data.pfp || "https://ui-avatars.com/api/?background=random&name=" + (data.username || "U");
@@ -395,6 +419,14 @@
     };
 
     window.unbanUser = async (uid) => { await update(ref(database, `users/${uid}`), { kicked: false, isBanned: false }); openBanManager(); };
+    window.adminMute = async (uid) => {
+      const s = await get(child(ref(database), `users/${uid}`));
+      update(ref(database, `users/${uid}`), { isBanned: !s.val()?.isBanned });
+    };
+    window.adminBan = (uid) => {
+      if(confirm("Kick and permanently ban this user?")) update(ref(database, `users/${uid}`), { kicked: true });
+    };
+
     window.clearChat = () => { if(confirm("Clear all messages?")) remove(ref(database, 'messages')); };
     
     window.sendMessage = () => {
