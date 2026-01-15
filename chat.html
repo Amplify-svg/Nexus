@@ -19,6 +19,15 @@
       font-style: italic; color: #888; height: 15px; z-index: 5;
     }
 
+    /* Progress Bar */
+    #uploadProgressContainer {
+        position: fixed; top: 65px; left: 0; width: 100%; height: 4px;
+        background: rgba(0,0,0,0.1); z-index: 1000; display: none;
+    }
+    #uploadProgressBar {
+        width: 0%; height: 100%; background: #4285f4; transition: width 0.2s;
+    }
+
     /* Message Bubbles */
     .message {
       padding: 10px 15px; border-radius: 18px; max-width: 75%;
@@ -126,6 +135,10 @@
 
   <canvas id="particleCanvas"></canvas>
   <script src="global.js"></script>
+
+  <div id="uploadProgressContainer">
+      <div id="uploadProgressBar"></div>
+  </div>
 
   <div id="mediaModal">
       <div class="close-btn" onclick="closeMediaModal()">&times;</div>
@@ -267,27 +280,55 @@
 
     function setupFileUpload() {
         const fileInput = document.getElementById('fileInput');
-        fileInput.addEventListener('change', function(e) {
+        const progressContainer = document.getElementById('uploadProgressContainer');
+        const progressBar = document.getElementById('uploadProgressBar');
+
+        fileInput.addEventListener('change', async function(e) {
             if (isBanned) { alert("You are muted."); return; }
             const file = e.target.files[0];
             if (!file) return;
-            if (file.size > 2 * 1024 * 1024) { alert("File too large (Max 2MB)."); return; }
 
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                push(ref(database, 'messages'), {
-                    username: currentUsername,
-                    userId: currentUser.uid,
-                    email: currentUser.email,
-                    isAdminMsg: isAdmin,
-                    style: isAdmin ? adminSettings : null,
-                    timestamp: serverTimestamp(),
-                    media: evt.target.result,
-                    mediaType: file.type.startsWith('video') ? 'video' : 'image'
+            // Show Progress Bar
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '10%'; 
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("upload_preset", "z1d4s4al"); 
+
+            try {
+                // Cloudinary fetch
+                const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { 
+                    method: "POST", 
+                    body: formData 
                 });
-            };
-            reader.readAsDataURL(file);
-            fileInput.value = ""; 
+                
+                progressBar.style.width = '100%';
+
+                if (!res.ok) throw new Error("Cloudinary upload failed");
+                const data = await res.json();
+                
+                if(data.secure_url) {
+                    push(ref(database, 'messages'), {
+                        username: currentUsername,
+                        userId: currentUser.uid,
+                        email: currentUser.email,
+                        isAdminMsg: isAdmin,
+                        style: isAdmin ? adminSettings : null,
+                        timestamp: serverTimestamp(),
+                        media: data.secure_url,
+                        mediaType: data.resource_type === 'video' ? 'video' : 'image'
+                    });
+                }
+            } catch(err) {
+                alert("Upload failed: " + err.message);
+            } finally {
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                }, 500);
+                fileInput.value = ""; 
+            }
         });
     }
 
@@ -311,11 +352,10 @@
       
       if (msg.isAdminMsg && msg.style?.nameColor) userSpan.style.color = msg.style.nameColor;
 
-      // --- ADMIN TOOLTIP RE-ADDED ---
       if (isAdmin && !isOwn) {
         const tooltip = document.createElement("div");
         tooltip.className = "admin-tooltip";
-        tooltip.onclick = (e) => e.stopPropagation(); // Don't trigger profile card when clicking tooltip buttons
+        tooltip.onclick = (e) => e.stopPropagation();
         tooltip.innerHTML = `
           <b style="color:#4285f4">${msg.email || 'No email'}</b><br>
           <div style="display:flex; gap:5px; justify-content:center; margin-top:8px;">
@@ -327,12 +367,22 @@
       }
 
       const contentDiv = document.createElement("div");
-      if (msg.text) contentDiv.textContent = msg.text;
+      if (msg.text) {
+          const textEl = document.createElement('span');
+          textEl.textContent = msg.text;
+          contentDiv.appendChild(textEl);
+      }
 
       if (msg.media) {
-          const mediaEl = document.createElement(msg.mediaType === 'video' ? 'video' : 'img');
+          const isVideo = msg.mediaType === 'video';
+          const mediaEl = document.createElement(isVideo ? 'video' : 'img');
           mediaEl.src = msg.media;
           mediaEl.className = 'chat-media';
+          if(isVideo) {
+              mediaEl.muted = true;
+              mediaEl.loop = true;
+              mediaEl.setAttribute('playsinline', '');
+          }
           mediaEl.onclick = (e) => { e.stopPropagation(); openMediaModal(msg.media, msg.mediaType); };
           contentDiv.appendChild(mediaEl);
       }
@@ -355,7 +405,6 @@
         if (snap.exists()) {
             const data = snap.val();
             document.getElementById('cardName').textContent = data.username || "User";
-            // Admins can see the email on the profile card too
             document.getElementById('cardEmail').textContent = isAdmin ? (data.email || "") : "";
             document.getElementById('cardBio').textContent = data.bio ? `"${data.bio}"` : "No bio yet.";
             document.getElementById('cardPfp').src = data.pfp || "https://ui-avatars.com/api/?background=random&name=" + (data.username || "U");
@@ -445,7 +494,12 @@
         const img = document.getElementById('modalImg');
         const video = document.getElementById('modalVideo');
         modal.style.display = 'flex';
-        if (type === 'video') { img.style.display = 'none'; video.style.display = 'block'; video.src = src; }
+        if (type === 'video') { 
+            img.style.display = 'none'; 
+            video.style.display = 'block'; 
+            video.src = src; 
+            video.play();
+        }
         else { video.style.display = 'none'; img.style.display = 'block'; img.src = src; }
     };
 
