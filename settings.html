@@ -44,6 +44,9 @@
     .settings-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
     .settings-value { font-size: 16px; margin-top: 5px; color: inherit; width: 100%; word-break: break-all;}
 
+    .reveal-link { color: #4285f4; cursor: pointer; font-size: 13px; text-decoration: none; margin-left: 10px; font-weight: 600; }
+    .reveal-link:hover { text-decoration: underline; }
+
     .edit-btn {
       background: rgba(66, 133, 244, 0.1); color: #4285f4; padding: 8px 20px;
       border-radius: 8px; border: 1px solid rgba(66, 133, 244, 0.2);
@@ -58,9 +61,11 @@
     }
     body.dark-mode .nexus-input { border-color: #444; color: white; }
 
+    /* Profile Card specific styles */
+    .avatar-container { position: relative; width: 100px; height: 100px; margin-right: 25px; }
     .avatar-preview {
-        width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
-        border: 3px solid #4285f4; margin-right: 20px; background: #eee;
+        width: 100px; height: 100px; border-radius: 50%; object-fit: cover;
+        border: 3px solid #4285f4; background: #eee;
     }
 
     .appearance-toggle { display: flex; gap: 10px; margin-top: 15px; }
@@ -73,7 +78,6 @@
       background: rgba(66, 133, 244, 0.15); border-color: #4285f4; color: #4285f4;
     }
 
-    /* Danger Zone */
     .danger-section { border: 1px solid rgba(234, 67, 53, 0.3) !important; }
     .danger-btn {
       width: 100%; padding: 14px; border-radius: 10px; font-weight: 800;
@@ -85,7 +89,6 @@
       background: transparent; color: #888; font-size: 12px; border: none;
       margin-top: 20px; text-decoration: underline; opacity: 0.5; cursor: pointer;
     }
-    .delete-btn:hover { color: #ea4335; opacity: 1; }
   </style>
 </head>
 <body class="dark-mode">
@@ -101,22 +104,25 @@
       
       <div class="settings-item">
         <div style="display:flex; align-items:center; width: 100%;">
-            <div style="position: relative;">
+            <div class="avatar-container">
                 <img id="avatarPreview" src="" class="avatar-preview">
                 <input type="file" id="pfpFileInput" accept="image/*" style="display:none;">
-                <button class="edit-btn" onclick="document.getElementById('pfpFileInput').click()" style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); font-size: 10px; padding: 4px 8px; white-space: nowrap;">Upload</button>
+                <div style="display: flex; gap: 5px; justify-content: center; margin-top: 8px;">
+                    <button class="edit-btn" id="uploadBtn" style="font-size: 10px; padding: 4px 8px;">Upload</button>
+                    <button class="edit-btn" id="removePfpBtn" style="font-size: 10px; padding: 4px 8px; border-color: #ea4335; color: #ea4335;">✖</button>
+                </div>
             </div>
-            <div style="flex: 1; margin-left: 20px;">
+            <div style="flex: 1;">
                 <div class="settings-label">Profile Picture URL</div>
-                <input type="text" id="avatarInput" class="nexus-input" placeholder="Paste link or upload above...">
+                <input type="text" id="avatarInput" class="nexus-input" placeholder="URL loads automatically after upload...">
             </div>
         </div>
       </div>
 
       <div class="settings-item column">
         <div class="settings-label">Bio / About Me</div>
-        <textarea id="bioInput" class="nexus-input" rows="3" placeholder="Write something about yourself..."></textarea>
-        <button class="edit-btn" id="saveProfileBtn" style="align-self: flex-end; margin-top: 10px;">Save Profile</button>
+        <textarea id="bioInput" class="nexus-input" rows="3" placeholder="Tell the world about yourself..."></textarea>
+        <button class="edit-btn" id="saveProfileBtn" style="align-self: flex-end; margin-top: 10px;">Save Profile Changes</button>
       </div>
     </div>
 
@@ -126,7 +132,7 @@
           <div class="settings-label">Email Address</div>
           <div class="settings-value">
             <span id="emailDisplay">********@gmail.com</span>
-            <span class="reveal-link" onclick="revealEmail()" id="emailRevealBtn">Show</span>
+            <span class="reveal-link" id="emailRevealBtn">Show</span>
           </div>
         </div>
       </div>
@@ -151,7 +157,7 @@
     <div class="settings-section danger-section">
       <button class="danger-btn logout-btn-full" id="fullLogoutBtn">LOGOUT SESSION</button>
       <div style="text-align: center;">
-        <button class="delete-btn" id="deleteAccountBtn">Delete Account</button>
+        <button class="delete-btn" id="deleteAccountBtn">Permanently Delete Account</button>
       </div>
     </div>
   </div>
@@ -176,6 +182,7 @@
     const database = getDatabase(app);
 
     let currentUser = null;
+    let currentUsername = "";
     let storedEmail = "";
 
     onAuthStateChanged(auth, async user => {
@@ -186,36 +193,44 @@
       const snap = await get(child(ref(database), `users/${user.uid}`));
       const data = snap.val() || {};
       
-      document.getElementById('usernameDisplay').textContent = data.username || user.email.split('@')[0];
+      currentUsername = data.username || user.email.split('@')[0];
+      document.getElementById('usernameDisplay').textContent = currentUsername;
       document.getElementById('bioInput').value = data.bio || "";
       document.getElementById('avatarInput').value = data.pfp || "";
-      document.getElementById('avatarPreview').src = data.pfp || `https://ui-avatars.com/api/?background=random&name=${data.username || 'U'}`;
+      
+      // Load image
+      document.getElementById('avatarPreview').src = data.pfp || `https://ui-avatars.com/api/?background=random&name=${currentUsername}`;
       
       updateUIAppearance(data.appearance === "dark" ? "dark" : "light");
     });
 
     // --- Cloudinary Upload Logic ---
     const pfpFileInput = document.getElementById('pfpFileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    uploadBtn.onclick = () => pfpFileInput.click();
+
     pfpFileInput.addEventListener("change", async () => {
       const file = pfpFileInput.files[0];
       if(!file) return;
 
-      const btn = document.querySelector('button[onclick*="pfpFileInput"]');
-      const originalText = btn.textContent;
-      btn.textContent = "Uploading...";
-      btn.disabled = true;
+      const originalText = uploadBtn.textContent;
+      uploadBtn.textContent = "...";
+      uploadBtn.disabled = true;
 
       const formData = new FormData();
       formData.append("file", file);
       formData.append("upload_preset", "z1d4s4al"); 
 
       try {
-        const res = await fetch("https://api.api-f.com/v1_1/dcbo4oozo/upload", { 
+        const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { 
           method: "POST", 
           body: formData 
         });
-        const data = await res.json();
         
+        if (!res.ok) throw new Error("Upload failed. Check Cloudinary settings.");
+        
+        const data = await res.json();
         if(data.secure_url) {
           document.getElementById('avatarInput').value = data.secure_url;
           document.getElementById('avatarPreview').src = data.secure_url;
@@ -223,23 +238,28 @@
       } catch(err) {
         alert("Upload failed: " + err.message);
       } finally {
-        btn.textContent = originalText;
-        btn.disabled = false;
+        uploadBtn.textContent = originalText;
+        uploadBtn.disabled = false;
         pfpFileInput.value = "";
       }
     });
 
+    // --- Remove Photo Logic ---
+    document.getElementById('removePfpBtn').onclick = () => {
+        if(confirm("Remove profile picture?")) {
+            document.getElementById('avatarInput').value = "";
+            document.getElementById('avatarPreview').src = `https://ui-avatars.com/api/?background=random&name=${currentUsername}`;
+        }
+    };
+
     // --- Save Profile Changes ---
     document.getElementById('saveProfileBtn').onclick = async () => {
-      const pfpUrl = document.getElementById('avatarInput').value.trim();
-      const bioText = document.getElementById('bioInput').value.trim();
-
       try {
         await update(ref(database, `users/${currentUser.uid}`), {
-          pfp: pfpUrl,
-          bio: bioText
+          pfp: document.getElementById('avatarInput').value.trim(),
+          bio: document.getElementById('bioInput').value.trim()
         });
-        alert("Profile saved successfully!");
+        alert("Profile saved!");
       } catch(e) {
         alert("Error saving profile.");
       }
@@ -247,27 +267,14 @@
 
     // --- Username Update ---
     document.getElementById('editUserBtn').onclick = async () => {
-      const currentName = document.getElementById('usernameDisplay').textContent;
-      const newName = prompt("Enter new username:", currentName);
-      if (newName && newName !== currentName) {
+      const newName = prompt("Enter new username:", currentUsername);
+      if (newName && newName !== currentUsername) {
         await update(ref(database, `users/${currentUser.uid}`), { username: newName });
         location.reload();
       }
     };
 
-    // --- Helpers ---
-    window.revealEmail = () => {
-      const display = document.getElementById('emailDisplay');
-      const btn = document.getElementById('emailRevealBtn');
-      if (display.textContent.includes('*')) {
-        display.textContent = storedEmail;
-        btn.textContent = "Hide";
-      } else {
-        display.textContent = "********@gmail.com";
-        btn.textContent = "Show";
-      }
-    };
-
+    // --- Appearance Management ---
     function updateUIAppearance(mode) {
       document.body.classList.toggle('dark-mode', mode === 'dark');
       document.getElementById('darkMode').classList.toggle('active', mode === 'dark');
@@ -281,6 +288,18 @@
       updateUIAppearance(mode);
       if (currentUser) await update(ref(database, `users/${currentUser.uid}`), { appearance: mode });
     }
+
+    // --- Helpers ---
+    document.getElementById('emailRevealBtn').onclick = function() {
+      const display = document.getElementById('emailDisplay');
+      if (display.textContent.includes('*')) {
+          display.textContent = storedEmail;
+          this.textContent = "Hide";
+      } else {
+          display.textContent = "********@gmail.com";
+          this.textContent = "Show";
+      }
+    };
 
     document.getElementById('fullLogoutBtn').onclick = () => signOut(auth).then(() => window.location.href = 'Home.html');
   </script>
