@@ -39,25 +39,33 @@
       padding: 15px 0;
       border-bottom: 1px solid rgba(128, 128, 128, 0.2);
     }
+    .settings-item.column { flex-direction: column; align-items: flex-start; gap: 10px; }
 
     .settings-item:last-child { border-bottom: none; }
     .settings-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
-    .settings-value { font-size: 16px; margin-top: 5px; color: inherit; }
+    .settings-value { font-size: 16px; margin-top: 5px; color: inherit; width: 100%; word-break: break-all;}
 
     .reveal-link { color: #4285f4; cursor: pointer; font-size: 13px; text-decoration: none; margin-left: 10px; font-weight: 600; }
     .reveal-link:hover { text-decoration: underline; }
 
     .edit-btn {
-      background: rgba(66, 133, 244, 0.1);
-      color: #4285f4;
-      padding: 8px 20px;
-      border-radius: 8px;
-      border: 1px solid rgba(66, 133, 244, 0.2);
-      cursor: pointer;
-      transition: 0.2s;
-      font-weight: 600;
+      background: rgba(66, 133, 244, 0.1); color: #4285f4; padding: 8px 20px;
+      border-radius: 8px; border: 1px solid rgba(66, 133, 244, 0.2);
+      cursor: pointer; transition: 0.2s; font-weight: 600;
     }
     .edit-btn:hover { background: #4285f4; color: white; border-color: #4285f4; }
+
+    /* Custom Inputs for Profile */
+    .nexus-input {
+        width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;
+        background: transparent; color: inherit; font-family: inherit; margin-top: 5px;
+    }
+    body.dark-mode .nexus-input { border-color: #444; color: white; }
+
+    .avatar-preview {
+        width: 60px; height: 60px; border-radius: 50%; object-fit: cover;
+        border: 2px solid #4285f4; margin-right: 15px;
+    }
 
     /* Appearance Toggles */
     .appearance-toggle { display: flex; gap: 10px; margin-top: 15px; }
@@ -72,18 +80,12 @@
 
     /* Danger Zone */
     .danger-section { border: 1px solid rgba(234, 67, 53, 0.3) !important; }
-    
     .danger-btn {
       width: 100%; padding: 14px; border-radius: 10px; font-weight: 800;
-      cursor: pointer; transition: 0.3s; margin-top: 10px; border: 1px solid transparent;
-      letter-spacing: 1px;
+      cursor: pointer; transition: 0.3s; margin-top: 10px; border: 1px solid transparent; letter-spacing: 1px;
     }
-    
-    .logout-btn-full {
-      background: rgba(234, 67, 53, 0.1); color: #ea4335; border: 1px solid rgba(234, 67, 53, 0.3);
-    }
+    .logout-btn-full { background: rgba(234, 67, 53, 0.1); color: #ea4335; border: 1px solid rgba(234, 67, 53, 0.3); }
     .logout-btn-full:hover { background: #ea4335; color: white; }
-
     .delete-btn {
       background: transparent; color: #888; font-size: 12px; border: none;
       margin-top: 20px; text-decoration: underline; opacity: 0.5; cursor: pointer;
@@ -94,11 +96,30 @@
 <body class="dark-mode">
 
   <canvas id="particleCanvas"></canvas>
-  
   <script src="global.js"></script>
 
   <div class="settings-page">
     <h2 style="margin-bottom: 30px; font-weight: 300; letter-spacing: -1px; font-size: 32px;">System Settings</h2>
+
+    <div class="settings-section">
+      <div style="margin-bottom: 15px; font-size: 18px; font-weight: bold; color: #4285f4;">Public Profile</div>
+      
+      <div class="settings-item">
+        <div style="display:flex; align-items:center;">
+            <img id="avatarPreview" src="https://ui-avatars.com/api/?name=?" class="avatar-preview">
+            <div>
+                <div class="settings-label">Avatar URL (Image/GIF Link)</div>
+                <input type="text" id="avatarInput" class="nexus-input" placeholder="Paste image link here...">
+            </div>
+        </div>
+        <button class="edit-btn" id="saveProfileBtn">Save</button>
+      </div>
+
+      <div class="settings-item column">
+        <div class="settings-label">Bio / About Me</div>
+        <textarea id="bioInput" class="nexus-input" rows="3" placeholder="Write something about yourself..."></textarea>
+      </div>
+    </div>
 
     <div class="settings-section">
       <div class="settings-item">
@@ -173,17 +194,14 @@
     let currentUsername = "";
     let storedEmail = "";
 
-    // --- Dynamic Home URL Helper ---
-    // Finds the link injected by global.js so you don't have to edit this file
     function getHomeUrl() {
-        const homeLink = document.querySelector('.sidebar .nav-item'); // First link is usually Home
-        return homeLink ? homeLink.getAttribute('href') : 'index.html'; // Fallback
+        const homeLink = document.querySelector('.sidebar .nav-item');
+        return homeLink ? homeLink.getAttribute('href') : 'index.html';
     }
 
     // --- Auth State Monitor ---
     onAuthStateChanged(auth, async user => {
       if (!user) {
-        // Redirect to whatever the first link in your global.js sidebar is
         window.location.href = getHomeUrl();
         return;
       }
@@ -199,6 +217,18 @@
       document.getElementById('usernameDisplay').textContent = currentUsername;
       localStorage.setItem('userName', currentUsername);
       
+      // Populate Profile Fields
+      if(data.avatar) {
+          document.getElementById('avatarInput').value = data.avatar;
+          document.getElementById('avatarPreview').src = data.avatar;
+      } else {
+          document.getElementById('avatarPreview').src = `https://ui-avatars.com/api/?name=${currentUsername}`;
+      }
+      
+      if(data.bio) {
+          document.getElementById('bioInput').value = data.bio;
+      }
+      
       // Sync Theme
       if (data.appearance === "dark") {
           updateUIAppearance("dark");
@@ -206,9 +236,26 @@
           updateUIAppearance("light");
       }
 
-      // Signal global.js navigation to refresh
       window.dispatchEvent(new Event('nameUpdated'));
     });
+
+    // --- Save Profile (Avatar & Bio) ---
+    document.getElementById('saveProfileBtn').onclick = async () => {
+        const avatarUrl = document.getElementById('avatarInput').value.trim();
+        const bioText = document.getElementById('bioInput').value.trim();
+
+        try {
+            await update(ref(database, `users/${currentUser.uid}`), {
+                avatar: avatarUrl,
+                bio: bioText
+            });
+            // Update preview immediately
+            document.getElementById('avatarPreview').src = avatarUrl || `https://ui-avatars.com/api/?name=${currentUsername}`;
+            alert("Profile updated!");
+        } catch(e) {
+            alert("Error saving profile.");
+        }
+    };
 
     // --- Username Update ---
     document.getElementById('editUserBtn').onclick = async () => {
@@ -247,7 +294,6 @@
             localStorage.clear();
             sessionStorage.clear();
             await signOut(auth);
-            // Redirects to dynamic home
             window.location.replace(getHomeUrl());
         }
     };
@@ -259,8 +305,8 @@
         if (confirmName === currentUsername) {
             try {
                 const uid = currentUser.uid;
-                await remove(ref(database, `users/${uid}`)); // Wipe DB entry
-                await deleteUser(currentUser);              // Wipe Auth entry
+                await remove(ref(database, `users/${uid}`));
+                await deleteUser(currentUser);
                 localStorage.clear();
                 window.location.replace(getHomeUrl());
             } catch (err) {
@@ -305,7 +351,6 @@
       }
     };
   </script>
-
   <script src="particles.js"></script>
 </body>
 </html>
