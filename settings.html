@@ -26,7 +26,6 @@
       border: 1px solid rgba(0, 0, 0, 0.1);
     }
 
-    /* Dark mode override */
     body.dark-mode .settings-section {
       background: rgba(30, 30, 30, 0.6);
       border: 1px solid #333;
@@ -45,17 +44,14 @@
     .settings-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
     .settings-value { font-size: 16px; margin-top: 5px; color: inherit; width: 100%; word-break: break-all;}
 
-    .reveal-link { color: #4285f4; cursor: pointer; font-size: 13px; text-decoration: none; margin-left: 10px; font-weight: 600; }
-    .reveal-link:hover { text-decoration: underline; }
-
     .edit-btn {
       background: rgba(66, 133, 244, 0.1); color: #4285f4; padding: 8px 20px;
       border-radius: 8px; border: 1px solid rgba(66, 133, 244, 0.2);
       cursor: pointer; transition: 0.2s; font-weight: 600;
     }
     .edit-btn:hover { background: #4285f4; color: white; border-color: #4285f4; }
+    .edit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* Custom Inputs for Profile */
     .nexus-input {
         width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;
         background: transparent; color: inherit; font-family: inherit; margin-top: 5px;
@@ -63,11 +59,10 @@
     body.dark-mode .nexus-input { border-color: #444; color: white; }
 
     .avatar-preview {
-        width: 60px; height: 60px; border-radius: 50%; object-fit: cover;
-        border: 2px solid #4285f4; margin-right: 15px;
+        width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
+        border: 3px solid #4285f4; margin-right: 20px; background: #eee;
     }
 
-    /* Appearance Toggles */
     .appearance-toggle { display: flex; gap: 10px; margin-top: 15px; }
     .toggle-option {
       flex: 1; padding: 12px; background: rgba(128, 128, 128, 0.1);
@@ -105,19 +100,23 @@
       <div style="margin-bottom: 15px; font-size: 18px; font-weight: bold; color: #4285f4;">Public Profile</div>
       
       <div class="settings-item">
-        <div style="display:flex; align-items:center;">
-            <img id="avatarPreview" src="https://ui-avatars.com/api/?name=?" class="avatar-preview">
-            <div>
-                <div class="settings-label">Avatar URL (Image/GIF Link)</div>
-                <input type="text" id="avatarInput" class="nexus-input" placeholder="Paste image link here...">
+        <div style="display:flex; align-items:center; width: 100%;">
+            <div style="position: relative;">
+                <img id="avatarPreview" src="" class="avatar-preview">
+                <input type="file" id="pfpFileInput" accept="image/*" style="display:none;">
+                <button class="edit-btn" onclick="document.getElementById('pfpFileInput').click()" style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); font-size: 10px; padding: 4px 8px; white-space: nowrap;">Upload</button>
+            </div>
+            <div style="flex: 1; margin-left: 20px;">
+                <div class="settings-label">Profile Picture URL</div>
+                <input type="text" id="avatarInput" class="nexus-input" placeholder="Paste link or upload above...">
             </div>
         </div>
-        <button class="edit-btn" id="saveProfileBtn">Save</button>
       </div>
 
       <div class="settings-item column">
         <div class="settings-label">Bio / About Me</div>
         <textarea id="bioInput" class="nexus-input" rows="3" placeholder="Write something about yourself..."></textarea>
+        <button class="edit-btn" id="saveProfileBtn" style="align-self: flex-end; margin-top: 10px;">Save Profile</button>
       </div>
     </div>
 
@@ -127,7 +126,7 @@
           <div class="settings-label">Email Address</div>
           <div class="settings-value">
             <span id="emailDisplay">********@gmail.com</span>
-            <span class="reveal-link" id="emailRevealBtn">Show</span>
+            <span class="reveal-link" onclick="revealEmail()" id="emailRevealBtn">Show</span>
           </div>
         </div>
       </div>
@@ -138,14 +137,6 @@
           <div class="settings-value" id="usernameDisplay">---</div>
         </div>
         <button class="edit-btn" id="editUserBtn">Change</button>
-      </div>
-
-      <div class="settings-item">
-        <div>
-          <div class="settings-label">Security</div>
-          <div class="settings-value">Account Password</div>
-        </div>
-        <button class="edit-btn" id="changePassBtn">Update</button>
       </div>
     </div>
 
@@ -158,22 +149,16 @@
     </div>
 
     <div class="settings-section danger-section">
-      <div class="settings-label" style="color: #ea4335;">Danger Zone</div>
-      <p style="font-size: 12px; color: #888; margin: 8px 0 15px 0; line-height: 1.4;">
-        Actions here are sensitive. Logout to clear your session, or delete your account to remove all data from Nexus servers.
-      </p>
-      
       <button class="danger-btn logout-btn-full" id="fullLogoutBtn">LOGOUT SESSION</button>
-      
       <div style="text-align: center;">
-        <button class="delete-btn" id="deleteAccountBtn">Permanently Delete Account</button>
+        <button class="delete-btn" id="deleteAccountBtn">Delete Account</button>
       </div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut, deleteUser, updatePassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut, deleteUser } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { getDatabase, ref, get, update, child, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -191,141 +176,102 @@
     const database = getDatabase(app);
 
     let currentUser = null;
-    let currentUsername = "";
     let storedEmail = "";
 
-    function getHomeUrl() {
-        const homeLink = document.querySelector('.sidebar .nav-item');
-        return homeLink ? homeLink.getAttribute('href') : 'index.html';
-    }
-
-    // --- Auth State Monitor ---
     onAuthStateChanged(auth, async user => {
-      if (!user) {
-        window.location.href = getHomeUrl();
-        return;
-      }
+      if (!user) { window.location.href = 'Home.html'; return; }
       currentUser = user;
       storedEmail = user.email;
       
       const snap = await get(child(ref(database), `users/${user.uid}`));
       const data = snap.val() || {};
       
-      currentUsername = data.username || user.email.split('@')[0];
+      document.getElementById('usernameDisplay').textContent = data.username || user.email.split('@')[0];
+      document.getElementById('bioInput').value = data.bio || "";
+      document.getElementById('avatarInput').value = data.pfp || "";
+      document.getElementById('avatarPreview').src = data.pfp || `https://ui-avatars.com/api/?background=random&name=${data.username || 'U'}`;
       
-      // Update UI
-      document.getElementById('usernameDisplay').textContent = currentUsername;
-      localStorage.setItem('userName', currentUsername);
-      
-      // Populate Profile Fields
-      if(data.avatar) {
-          document.getElementById('avatarInput').value = data.avatar;
-          document.getElementById('avatarPreview').src = data.avatar;
-      } else {
-          document.getElementById('avatarPreview').src = `https://ui-avatars.com/api/?name=${currentUsername}`;
-      }
-      
-      if(data.bio) {
-          document.getElementById('bioInput').value = data.bio;
-      }
-      
-      // Sync Theme
-      if (data.appearance === "dark") {
-          updateUIAppearance("dark");
-      } else {
-          updateUIAppearance("light");
-      }
-
-      window.dispatchEvent(new Event('nameUpdated'));
+      updateUIAppearance(data.appearance === "dark" ? "dark" : "light");
     });
 
-    // --- Save Profile (Avatar & Bio) ---
-    document.getElementById('saveProfileBtn').onclick = async () => {
-        const avatarUrl = document.getElementById('avatarInput').value.trim();
-        const bioText = document.getElementById('bioInput').value.trim();
+    // --- Cloudinary Upload Logic ---
+    const pfpFileInput = document.getElementById('pfpFileInput');
+    pfpFileInput.addEventListener("change", async () => {
+      const file = pfpFileInput.files[0];
+      if(!file) return;
 
-        try {
-            await update(ref(database, `users/${currentUser.uid}`), {
-                avatar: avatarUrl,
-                bio: bioText
-            });
-            // Update preview immediately
-            document.getElementById('avatarPreview').src = avatarUrl || `https://ui-avatars.com/api/?name=${currentUsername}`;
-            alert("Profile updated!");
-        } catch(e) {
-            alert("Error saving profile.");
+      const btn = document.querySelector('button[onclick*="pfpFileInput"]');
+      const originalText = btn.textContent;
+      btn.textContent = "Uploading...";
+      btn.disabled = true;
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "z1d4s4al"); 
+
+      try {
+        const res = await fetch("https://api.api-f.com/v1_1/dcbo4oozo/upload", { 
+          method: "POST", 
+          body: formData 
+        });
+        const data = await res.json();
+        
+        if(data.secure_url) {
+          document.getElementById('avatarInput').value = data.secure_url;
+          document.getElementById('avatarPreview').src = data.secure_url;
         }
+      } catch(err) {
+        alert("Upload failed: " + err.message);
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+        pfpFileInput.value = "";
+      }
+    });
+
+    // --- Save Profile Changes ---
+    document.getElementById('saveProfileBtn').onclick = async () => {
+      const pfpUrl = document.getElementById('avatarInput').value.trim();
+      const bioText = document.getElementById('bioInput').value.trim();
+
+      try {
+        await update(ref(database, `users/${currentUser.uid}`), {
+          pfp: pfpUrl,
+          bio: bioText
+        });
+        alert("Profile saved successfully!");
+      } catch(e) {
+        alert("Error saving profile.");
+      }
     };
 
     // --- Username Update ---
     document.getElementById('editUserBtn').onclick = async () => {
-      const newName = prompt("Enter new username:", currentUsername);
-      if (newName && newName !== currentUsername) {
+      const currentName = document.getElementById('usernameDisplay').textContent;
+      const newName = prompt("Enter new username:", currentName);
+      if (newName && newName !== currentName) {
         await update(ref(database, `users/${currentUser.uid}`), { username: newName });
-        localStorage.setItem('userName', newName);
         location.reload();
       }
     };
 
-    // --- Password Update ---
-    document.getElementById('changePassBtn').onclick = async () => {
-        const newPass = prompt("Enter new password (min 6 chars):");
-        if (!newPass || newPass.length < 6) {
-            alert("Password too short or empty.");
-            return;
-        }
-        const confirmPass = prompt("Confirm new password:");
-        if (newPass !== confirmPass) {
-            alert("Passwords do not match.");
-            return;
-        }
-
-        try {
-            await updatePassword(currentUser, newPass);
-            alert("Password updated successfully.");
-        } catch (err) {
-            alert("Security Error: Please log out and log back in to verify your identity before changing passwords.");
-        }
-    };
-
-    // --- Logout ---
-    document.getElementById('fullLogoutBtn').onclick = async () => {
-        if (confirm("Terminate current session?")) {
-            localStorage.clear();
-            sessionStorage.clear();
-            await signOut(auth);
-            window.location.replace(getHomeUrl());
-        }
-    };
-
-    // --- Delete Account ---
-    document.getElementById('deleteAccountBtn').onclick = async () => {
-        const confirmName = prompt(`WARNING: This is permanent. Type your username (${currentUsername}) to confirm deletion:`);
-        
-        if (confirmName === currentUsername) {
-            try {
-                const uid = currentUser.uid;
-                await remove(ref(database, `users/${uid}`));
-                await deleteUser(currentUser);
-                localStorage.clear();
-                window.location.replace(getHomeUrl());
-            } catch (err) {
-                alert("Sensitive Action: Please re-login to Nexus and try deleting again immediately.");
-            }
-        }
-    };
-
-    // --- Appearance Management ---
-    function updateUIAppearance(mode) {
-      if (mode === 'dark') {
-        document.body.classList.add('dark-mode');
-        document.getElementById('darkMode').classList.add('active');
-        document.getElementById('lightMode').classList.remove('active');
+    // --- Helpers ---
+    window.revealEmail = () => {
+      const display = document.getElementById('emailDisplay');
+      const btn = document.getElementById('emailRevealBtn');
+      if (display.textContent.includes('*')) {
+        display.textContent = storedEmail;
+        btn.textContent = "Hide";
       } else {
-        document.body.classList.remove('dark-mode');
-        document.getElementById('lightMode').classList.add('active');
-        document.getElementById('darkMode').classList.remove('active');
+        display.textContent = "********@gmail.com";
+        btn.textContent = "Show";
       }
+    };
+
+    function updateUIAppearance(mode) {
+      document.body.classList.toggle('dark-mode', mode === 'dark');
+      document.getElementById('darkMode').classList.toggle('active', mode === 'dark');
+      document.getElementById('lightMode').classList.toggle('active', mode !== 'dark');
     }
 
     document.getElementById('lightMode').onclick = () => saveTheme('light');
@@ -333,24 +279,10 @@
 
     async function saveTheme(mode) {
       updateUIAppearance(mode);
-      localStorage.setItem('theme', mode);
-      if (currentUser) {
-          await update(ref(database, `users/${currentUser.uid}`), { appearance: mode });
-      }
+      if (currentUser) await update(ref(database, `users/${currentUser.uid}`), { appearance: mode });
     }
 
-    // --- Email Reveal ---
-    document.getElementById('emailRevealBtn').onclick = function() {
-      const display = document.getElementById('emailDisplay');
-      if (display.textContent.includes('*')) {
-          display.textContent = storedEmail;
-          this.textContent = "Hide";
-      } else {
-          display.textContent = "********@gmail.com";
-          this.textContent = "Show";
-      }
-    };
+    document.getElementById('fullLogoutBtn').onclick = () => signOut(auth).then(() => window.location.href = 'Home.html');
   </script>
-  <script src="particles.js"></script>
 </body>
 </html>
