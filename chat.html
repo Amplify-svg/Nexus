@@ -1,339 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nexus - Chat</title>
-  <link rel="icon" type="image/png" href="icon.png"> 
-  <link rel="stylesheet" href="style.css">
-  <style>
-    /* --- Chat Layout --- */
-    #chatBox {
-      position: absolute; top: 70px; left: 0; right: 0; bottom: 85px;
-      padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;
-      z-index: 2;
-    }
-    
-    /* Message Wrapper for Avatar + Bubble */
-    .message-wrapper {
-        display: flex;
-        gap: 10px;
-        align-items: flex-end;
-        max-width: 80%;
-    }
-    .message-wrapper.own { align-self: flex-end; flex-direction: row-reverse; }
-    .message-wrapper.other { align-self: flex-start; }
-
-    /* Small Avatar in Chat */
-    .msg-pfp {
-        width: 32px; height: 32px; border-radius: 50%;
-        object-fit: cover; flex-shrink: 0; cursor: pointer;
-        border: 1px solid rgba(66, 133, 244, 0.3);
-    }
-
-    /* Message Bubbles */
-    .message {
-      padding: 10px 15px; border-radius: 18px; 
-      word-wrap: break-word; animation: messageFade 0.3s ease; position: relative;
-      display: flex; flex-direction: column;
-    }
-    .message.own { background: #4285f4; color: white; border-bottom-right-radius: 4px; }
-    .message.other { background: #e0e0e0; color: #333; border-bottom-left-radius: 4px; }
-    body.dark-mode .message.other { background: #333; color: white; }
-
-    /* Timestamps */
-    .timestamp {
-        font-size: 9px; opacity: 0.7; margin-top: 4px;
-        align-self: flex-end;
-    }
-    .message.own .timestamp { color: #e0e0e0; }
-
-    /* Media Styles */
-    .chat-media {
-        display: block; max-width: 100%; max-height: 250px;
-        margin-top: 8px; border-radius: 8px; cursor: pointer;
-    }
-
-    /* Progress Bar */
-    #uploadProgressContainer {
-        position: fixed; top: 65px; left: 0; width: 100%; height: 4px;
-        background: rgba(0,0,0,0.1); z-index: 1000; display: none;
-    }
-    #uploadProgressBar { width: 0%; height: 100%; background: #4285f4; transition: width 0.2s; }
-
-    /* Modals & Profile Cards */
-    #mediaModal, #profileCardModal {
-        display: none; position: fixed; inset: 0; 
-        background: rgba(0,0,0,0.9); z-index: 9999; 
-        align-items: center; justify-content: center;
-    }
-    #mediaModal img, #mediaModal video { max-width: 95%; max-height: 95%; border-radius: 8px; }
-    .close-btn { position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; cursor: pointer; }
-
-    .profile-card {
-      background: white; width: 320px; border-radius: 20px;
-      overflow: hidden; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    body.dark-mode .profile-card { background: #222; color: white; }
-    .card-header { height: 80px; background: #4285f4; }
-    .card-pfp { width: 100px; height: 100px; border-radius: 50%; border: 5px solid white; margin-top: -50px; object-fit: cover; }
-    body.dark-mode .card-pfp { border-color: #222; }
-    .card-content { padding: 20px; }
-
-    /* Admin Styles */
-    .message.admin-gradient { background: linear-gradient(135deg, #667eea, #764ba2, #f093fb); background-size: 300% 300%; color: white !important; }
-    .message.admin-gradient.animate { animation: gradientShift 6s ease infinite; }
-    .message-user { font-size: 11px; font-weight: bold; margin-bottom: 4px; cursor: pointer; }
-    .admin-tooltip {
-      visibility: hidden; width: 180px; background-color: #222; color: #fff; text-align: center;
-      border-radius: 6px; padding: 10px; position: absolute; z-index: 100; bottom: 125%; left: 0;
-      opacity: 0; transition: opacity 0.2s; border: 1px solid #444; font-size: 11px;
-    }
-    .message-user:hover .admin-tooltip { visibility: visible; opacity: 1; }
-
-    /* Animations */
-    @keyframes messageFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes modalPop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
-
-    /* Input Bar */
-    #messageInputBox {
-      position: fixed; left: 0; right: 0; bottom: 0; height: 80px;
-      padding: 15px 20px; background: rgba(255,255,255,0.95);
-      display: flex; gap: 10px; align-items: center; border-top: 1px solid #ddd; z-index: 10;
-      backdrop-filter: blur(10px);
-    }
-    body.dark-mode #messageInputBox { background: rgba(20,20,20,0.95); border-top: 1px solid #333; }
-    #messageInput { flex: 1; padding: 12px 20px; border-radius: 30px; border: 1px solid #ddd; outline: none; }
-    body.dark-mode #messageInput { background: #111; color: white; border-color: #444; }
-
-    #memberList { position: fixed; right: -320px; top: 0; width: 300px; height: 100vh; background: white; border-left: 1px solid #ddd; transition: 0.3s; z-index: 4000; padding: 20px; }
-    body.dark-mode #memberList { background: #1a1a1a; border-left: 1px solid #333; color: white; }
-    #memberList.open { right: 0; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus - Secure Chat</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <canvas id="particleCanvas"></canvas>
-  <div id="uploadProgressContainer"><div id="uploadProgressBar"></div></div>
+    <canvas id="particleCanvas"></canvas>
 
-  <div id="mediaModal">
-      <div class="close-btn" onclick="closeMediaModal()">&times;</div>
-      <img id="modalImg" style="display:none;">
-      <video id="modalVideo" controls style="display:none;"></video>
-  </div>
+    <div id="chatBox"></div>
+    <div id="typingIndicator"></div>
 
-  <div id="profileCardModal" onclick="closeProfileCard()">
-      <div class="profile-card" onclick="event.stopPropagation()">
-          <div class="card-header"></div>
-          <img id="cardPfp" src="" class="card-pfp">
-          <div class="card-content">
-              <div id="cardName" class="card-name">---</div>
-              <div id="cardEmail" style="font-size: 12px; color: #888;"></div>
-              <p id="cardBio" class="card-bio">---</p>
-          </div>
-      </div>
-  </div>
-
-  <div id="memberList">
-    <button style="float:right; background:none; border:none; font-size:24px; cursor:pointer; color:inherit;" onclick="toggleMemberList()">×</button>
-    <h3 style="margin-bottom:15px;">Online Members (<span id="onlineCount">0</span>)</h3>
-    <div id="memberListContent"></div>
-  </div>
-
-  <div id="topActions" style="position: fixed; top: 75px; right: 20px; z-index: 10; display: flex; gap: 10px;">
-    <button id="adminClearBtn" onclick="clearChat()" style="display:none; background:#ea4335; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">CLEAR</button>
-    <button onclick="toggleMemberList()" style="background:#4285f4; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">👥 MEMBERS</button>
-  </div>
-
-  <div id="chatBox"></div>
-  <div id="typingIndicator" style="position:fixed; bottom:85px; left:20px; font-size:12px; color:#888;"></div>
-
-  <div id="messageInputBox">
-    <label for="fileInput" style="cursor:pointer; font-size:24px; padding: 0 10px; color: #4285f4;">📷</label>
-    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
-    <input id="messageInput" type="text" placeholder="Type a message..." autocomplete="off">
-    <button onclick="sendMessage()" style="padding:12px 25px; background:#4285f4; color:white; border:none; border-radius:30px; cursor:pointer; font-weight:bold;">Send</button>
-  </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getDatabase, ref, push, remove, set, update, onChildAdded, onChildRemoved, onValue, get, child, serverTimestamp, query, orderByChild, onDisconnect } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
-      authDomain: "chat-or-somethig.firebaseapp.com",
-      databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
-      projectId: "chat-or-somethig",
-      storageBucket: "chat-or-somethig.firebasestorage.app",
-      messagingSenderId: "598777875087",
-      appId: "1:598777875087:web:d100536dd269bc0a9d7efa"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const database = getDatabase(app);
-
-    let currentUser = null, currentUsername = "User", currentPfp = "", isAdmin = false, isBanned = false;
-
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) { window.location.href = 'Home.html'; return; }
-      currentUser = user;
-
-      onValue(ref(database, `users/${user.uid}`), (snap) => {
-        const data = snap.val() || {};
-        currentUsername = data.username || user.email.split('@')[0];
-        currentPfp = data.pfp || "";
-        isAdmin = data.isAdmin === true;
-        isBanned = data.isBanned === true;
+    <div id="messageInputBox">
+        <label for="fileInput" class="file-btn">📷</label>
+        <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
         
-        document.getElementById('adminClearBtn').style.display = isAdmin ? 'block' : 'none';
-        document.getElementById('messageInput').disabled = isBanned;
-        updateStatus();
-      });
+        <input id="messageInput" type="text" placeholder="Type a message..." autocomplete="off">
+        <button id="sendBtn" class="send-btn">➤</button>
+    </div>
+    
+    <div id="uploadProgress"></div>
 
-      setupChat();
-      setupFileUpload();
-    });
+    <div id="profileModal" class="modal" onclick="this.style.display='none'">
+        <div class="modal-content profile-card" onclick="event.stopPropagation()">
+            <div class="card-header-bg"></div>
+            <img id="modalPfp" class="big-pfp">
+            <h2 id="modalName">User</h2>
+            <p id="modalBio" style="font-style:italic; margin-top:10px;">"No bio set."</p>
+        </div>
+    </div>
 
-    function updateStatus() {
-      const statusRef = ref(database, `online/${currentUser.uid}`);
-      set(statusRef, { username: currentUsername, timestamp: serverTimestamp() });
-      onDisconnect(statusRef).remove();
-    }
+    <div id="mediaModal" class="modal" onclick="this.style.display='none'">
+        <div style="position:relative; max-width:90%; max-height:90%;">
+            <img id="expandedImg" style="max-width:100%; max-height:80vh; border-radius:8px; display:none;">
+            <video id="expandedVideo" controls style="max-width:100%; max-height:80vh; border-radius:8px; display:none;"></video>
+        </div>
+    </div>
 
-    function setupChat() {
-      const messagesRef = query(ref(database, 'messages'), orderByChild('timestamp'));
-      onChildAdded(messagesRef, (s) => {
-        renderMessage(s.key, s.val());
-        const cb = document.getElementById("chatBox");
-        cb.scrollTop = cb.scrollHeight;
-      });
-      onValue(ref(database, 'online'), (snap) => updateMemberList(snap.val() || {}));
-    }
+    <script src="particles.js"></script>
+    <script type="module" src="global.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+        import { getDatabase, ref, push, remove, set, update, onChildAdded, onChildRemoved, onValue, get, serverTimestamp, query, orderByChild } 
+        from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-    // --- Helper for Time ---
-    function formatTime(ts) {
-        if (!ts) return "";
-        const date = new Date(ts);
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
+        // Firebase Setup
+        const firebaseConfig = {
+            apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
+            authDomain: "chat-or-somethig.firebaseapp.com",
+            databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
+            projectId: "chat-or-somethig",
+            storageBucket: "chat-or-somethig.firebasestorage.app",
+            messagingSenderId: "598777875087",
+            appId: "1:598777875087:web:d100536dd269bc0a9d7efa"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
 
-    async function renderMessage(id, msg) {
-      const isOwn = currentUser && msg.userId === currentUser.uid;
-      
-      const wrapper = document.createElement("div");
-      wrapper.className = `message-wrapper ${isOwn ? 'own' : 'other'}`;
-      wrapper.id = `msg-wrap-${id}`;
+        let currentUser = null, currentUsername = "Guest", currentPfp = "", isAdmin = false, isBanned = false;
 
-      // Profile Picture
-      const pfpImg = document.createElement("img");
-      pfpImg.className = "msg-pfp";
-      pfpImg.src = msg.userPfp || `https://ui-avatars.com/api/?background=random&name=${msg.username}`;
-      pfpImg.onclick = () => showProfile(msg.userId);
+        onAuthStateChanged(auth, (user) => {
+            if (!user) return;
+            currentUser = user;
+            
+            onValue(ref(db, `users/${user.uid}`), (snap) => {
+                const data = snap.val() || {};
+                currentUsername = data.username || user.email.split('@')[0];
+                isAdmin = data.isAdmin === true;
+                isBanned = data.isBanned === true;
+                
+                const input = document.getElementById('messageInput');
+                input.disabled = isBanned;
+                if(isBanned) input.placeholder = "YOU ARE MUTED";
+            });
 
-      const div = document.createElement("div");
-      div.className = `message ${isOwn ? 'own' : 'other'}`;
-      if (msg.isAdminMsg) div.classList.add('admin-gradient');
+            setupChat();
+            setupTyping();
+            setupFileUpload();
+        });
 
-      const userSpan = document.createElement("span");
-      userSpan.className = "message-user";
-      userSpan.textContent = isOwn ? "You" : msg.username;
-      userSpan.onclick = () => showProfile(msg.userId);
+        function setupChat() {
+            const q = query(ref(db, 'messages'), orderByChild('timestamp'));
+            onChildAdded(q, (snapshot) => {
+                renderMessage(snapshot.key, snapshot.val());
+                const box = document.getElementById("chatBox");
+                box.scrollTop = box.scrollHeight;
+            });
+            onChildRemoved(ref(db, 'messages'), (snapshot) => {
+                const el = document.getElementById(`row-${snapshot.key}`);
+                if(el) el.remove();
+            });
+        }
 
-      const contentDiv = document.createElement("div");
-      if (msg.text) contentDiv.textContent = msg.text;
+        function renderMessage(key, msg) {
+            const isOwn = (msg.userId === currentUser.uid);
+            const row = document.createElement("div");
+            row.id = `row-${key}`;
+            row.className = `msg-row ${isOwn ? 'own' : 'other'}`;
 
-      if (msg.media) {
-          const isVideo = msg.mediaType === 'video';
-          const mediaEl = document.createElement(isVideo ? 'video' : 'img');
-          mediaEl.src = msg.media;
-          mediaEl.className = 'chat-media';
-          if(isVideo) { mediaEl.muted = true; mediaEl.loop = true; mediaEl.setAttribute('playsinline', ''); }
-          mediaEl.onclick = (e) => { e.stopPropagation(); openMediaModal(msg.media, msg.mediaType); };
-          contentDiv.appendChild(mediaEl);
-      }
+            const bubble = document.createElement("div");
+            bubble.className = `message ${isOwn ? 'own' : 'other'}`;
+            
+            // Text Content
+            const content = document.createElement("div");
+            content.textContent = msg.text || "";
+            
+            // Media Content
+            if (msg.media) {
+                const media = document.createElement(msg.mediaType === 'video' ? 'video' : 'img');
+                media.src = msg.media;
+                media.style.maxWidth = "100%";
+                media.style.borderRadius = "8px";
+                media.onclick = () => window.openMedia(msg.media, msg.mediaType);
+                content.appendChild(media);
+            }
 
-      const timeSpan = document.createElement("span");
-      timeSpan.className = "timestamp";
-      timeSpan.textContent = formatTime(msg.timestamp);
+            bubble.appendChild(content);
+            row.appendChild(bubble);
+            document.getElementById("chatBox").appendChild(row);
+        }
 
-      div.append(userSpan, contentDiv, timeSpan);
-      wrapper.append(pfpImg, div);
-      document.getElementById("chatBox").appendChild(wrapper);
-    }
+        // Global Actions
+        document.getElementById('sendBtn').onclick = () => {
+            const txt = document.getElementById('messageInput').value;
+            if(!txt.trim() || isBanned) return;
+            push(ref(db, 'messages'), {
+                text: txt,
+                username: currentUsername,
+                userId: currentUser.uid,
+                timestamp: serverTimestamp()
+            });
+            document.getElementById('messageInput').value = "";
+        };
 
-    function setupFileUpload() {
-        const fileInput = document.getElementById('fileInput');
-        fileInput.addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (!file || isBanned) return;
+        window.openMedia = (src, type) => {
+            const m = document.getElementById('mediaModal');
+            m.style.display = 'flex';
+            if(type==='video') {
+                document.getElementById('expandedVideo').style.display='block';
+                document.getElementById('expandedVideo').src = src;
+            } else {
+                document.getElementById('expandedImg').style.display='block';
+                document.getElementById('expandedImg').src = src;
+            }
+        };
 
-            document.getElementById('uploadProgressContainer').style.display = 'block';
-            document.getElementById('uploadProgressBar').style.width = '20%';
+        function setupTyping() {
+            const inp = document.getElementById('messageInput');
+            inp.addEventListener('input', () => {
+                set(ref(db, `typing/${currentUser.uid}`), { username: currentUsername });
+                setTimeout(() => set(ref(db, `typing/${currentUser.uid}`), null), 2000);
+            });
+            onValue(ref(db, 'typing'), (snap) => {
+                const val = snap.val() || {};
+                const names = Object.keys(val).filter(k => k !== currentUser.uid).map(k => val[k].username);
+                document.getElementById('typingIndicator').textContent = names.length ? names.join(", ") + " typing..." : "";
+            });
+        }
 
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("upload_preset", "z1d4s4al"); 
-
-            try {
+        function setupFileUpload() {
+            document.getElementById('fileInput').onchange = async (e) => {
+                const file = e.target.files[0];
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("upload_preset", "z1d4s4al");
                 const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { method: "POST", body: formData });
                 const data = await res.json();
-                document.getElementById('uploadProgressBar').style.width = '100%';
-
-                if(data.secure_url) {
-                    push(ref(database, 'messages'), {
-                        username: currentUsername,
-                        userPfp: currentPfp,
-                        userId: currentUser.uid,
-                        isAdminMsg: isAdmin,
-                        timestamp: serverTimestamp(),
-                        media: data.secure_url,
-                        mediaType: data.resource_type === 'video' ? 'video' : 'image'
-                    });
-                }
-            } catch(err) { alert("Upload failed"); }
-            finally { 
-                setTimeout(() => document.getElementById('uploadProgressContainer').style.display = 'none', 500);
-                fileInput.value = ""; 
-            }
-        });
-    }
-
-    window.sendMessage = () => {
-      const input = document.getElementById("messageInput");
-      if(!input.value.trim() || isBanned) return;
-      push(ref(database, 'messages'), {
-        text: input.value, username: currentUsername, userPfp: currentPfp, userId: currentUser.uid,
-        isAdminMsg: isAdmin, timestamp: serverTimestamp()
-      });
-      input.value = "";
-    };
-
-    window.showProfile = async (uid) => {
-        const snap = await get(ref(database, `users/${uid}`));
-        if (snap.exists()) {
-            const data = snap.val();
-            document.getElementById('cardName').textContent = data.username || "User";
-            document.getElementById('cardBio').textContent = data.bio || "No bio yet.";
-            document.getElementById('cardPfp').src = data.pfp || `https://ui-avatars.com/api/?background=random&name=${data.username}`;
-            document.getElementById('profileCardModal').style.display = 'flex';
+                push(ref(db, 'messages'), {
+                    username: currentUsername, userId: currentUser.uid,
+                    media: data.secure_url, mediaType: data.resource_type,
+                    timestamp: serverTimestamp()
+                });
+            };
         }
-    };
-
-    window.closeProfileCard = () => document.getElementById('profileCardModal').style.display = 'none';
-    window.openMediaModal = (src, type) => {
-        const modal = document.getElementById('mediaModal');
-        const img = document.getElementById('modalImg'), vid = document.getElementById('modalVideo');
-        modal.style.display = 'flex';
-        if (type === 'video') { img.style.display = 'none'; vid.style.display = 'block'; vid.src = src; vid.play(); }
-        else { vid.style.display = 'none'; img.style.display = 'block'; img.src = src; }
-    };
-    window.closeMediaModal = () => { document.getElementById('mediaModal').style.display = 'none'; document.getElementById('modalVideo').pause(); };
-    window.toggleMemberList = () => document.getElementById('memberList').classList.toggle('open');
-    window.clearChat = () => { if(confirm("Clear chat?")) remove(ref(database, 'messages')); };
-    document.getElementById("messageInput").addEventListener("keypress", (e) => { if(e.key === 'Enter') sendMessage(); });
-  </script>
+    </script>
 </body>
 </html>
