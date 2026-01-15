@@ -28,27 +28,46 @@
     .message.other { background: #e0e0e0; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; }
     body.dark-mode .message.other { background: #333; color: white; }
 
-    /* MEDIA STYLES (New) */
+    /* Media Styles */
     .chat-media {
         display: block; max-width: 100%; max-height: 250px;
         margin-top: 8px; border-radius: 8px; cursor: pointer;
         border: 1px solid rgba(0,0,0,0.1);
     }
     
-    /* MEDIA MODAL (New) */
-    #mediaModal {
+    /* MODALS GENERAL */
+    #mediaModal, #profileCardModal {
         display: none; position: fixed; inset: 0; 
-        background: rgba(0,0,0,0.95); z-index: 9999; 
+        background: rgba(0,0,0,0.9); z-index: 9999; 
         align-items: center; justify-content: center;
     }
     #mediaModal img, #mediaModal video {
         max-width: 95%; max-height: 95%; border-radius: 8px;
-        box-shadow: 0 0 30px rgba(0,0,0,0.5);
     }
-    #mediaModal .close-btn {
+    .close-btn {
         position: absolute; top: 20px; right: 30px; 
         color: white; font-size: 40px; cursor: pointer; z-index: 10000;
     }
+
+    /* PROFILE CARD STYLES */
+    .profile-card {
+      background: white; width: 320px; border-radius: 20px;
+      overflow: hidden; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+    }
+    body.dark-mode .profile-card { background: #222; color: white; }
+    .card-header { height: 80px; background: #4285f4; }
+    .card-pfp {
+      width: 100px; height: 100px; border-radius: 50%; 
+      border: 5px solid white; margin-top: -50px;
+      background: #eee; object-fit: cover;
+    }
+    body.dark-mode .card-pfp { border-color: #222; }
+    .card-content { padding: 20px; }
+    .card-name { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
+    .card-bio { font-size: 14px; color: #666; font-style: italic; margin-top: 10px; }
+    body.dark-mode .card-bio { color: #bbb; }
 
     /* Admin Specials */
     .message.admin-gradient {
@@ -61,17 +80,11 @@
 
     @keyframes messageFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    @keyframes modalPop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
 
-    .message-user { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; position: relative; }
-    .admin-viewable { text-decoration: underline dotted #4285f4; cursor: help; }
-
-    .admin-tooltip {
-      visibility: hidden; width: 180px; background-color: #222; color: #fff;
-      text-align: center; border-radius: 6px; padding: 10px;
-      position: absolute; z-index: 100; bottom: 125%; left: 0;
-      opacity: 0; transition: opacity 0.2s; border: 1px solid #444; font-weight: normal; font-size: 11px;
-    }
-    .message-user:hover .admin-tooltip { visibility: visible; opacity: 1; }
+    .message-user { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; position: relative; cursor: pointer; }
+    .message-user:hover { text-decoration: underline; }
+    .admin-viewable { text-decoration: underline dotted #4285f4; }
 
     /* Input Bar */
     #messageInputBox {
@@ -99,8 +112,6 @@
       border:1px solid #444; width:350px; max-height: 80vh; overflow-y: auto;
     }
     .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:5000; }
-
-    .member-item, .ban-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(128,128,128,0.2); }
   </style>
 </head>
 <body>
@@ -112,6 +123,18 @@
       <div class="close-btn" onclick="closeMediaModal()">&times;</div>
       <img id="modalImg" alt="Expanded" style="display:none;">
       <video id="modalVideo" controls style="display:none;"></video>
+  </div>
+
+  <div id="profileCardModal" onclick="closeProfileCard()">
+      <div class="profile-card" onclick="event.stopPropagation()">
+          <div class="card-header"></div>
+          <img id="cardPfp" src="" class="card-pfp">
+          <div class="card-content">
+              <div id="cardName" class="card-name">Username</div>
+              <div id="cardEmail" style="font-size: 12px; color: #888;"></div>
+              <p id="cardBio" class="card-bio">"No bio yet."</p>
+          </div>
+      </div>
   </div>
 
   <div id="memberList">
@@ -208,7 +231,7 @@
       onValue(ref(database, 'adminSettings/global'), (s) => { if(s.exists()) adminSettings = s.val(); });
       setupChat();
       setupTypingLogic();
-      setupFileUpload(); // New Function call
+      setupFileUpload();
     });
 
     function updateStatus() {
@@ -234,25 +257,16 @@
       });
     }
 
-    // --- Media Sending Logic ---
     function setupFileUpload() {
         const fileInput = document.getElementById('fileInput');
         fileInput.addEventListener('change', function(e) {
             if (isBanned) { alert("You are muted."); return; }
             const file = e.target.files[0];
             if (!file) return;
-
-            // Simple size check (2MB limit for RTDB safety)
-            if (file.size > 2 * 1024 * 1024) {
-                alert("File too large. Please send images/videos under 2MB.");
-                return;
-            }
+            if (file.size > 2 * 1024 * 1024) { alert("File too large (Max 2MB)."); return; }
 
             const reader = new FileReader();
             reader.onload = function(evt) {
-                const base64 = evt.target.result;
-                const type = file.type.startsWith('video') ? 'video' : 'image';
-                
                 push(ref(database, 'messages'), {
                     username: currentUsername,
                     userId: currentUser.uid,
@@ -260,12 +274,11 @@
                     isAdminMsg: isAdmin,
                     style: isAdmin ? adminSettings : null,
                     timestamp: serverTimestamp(),
-                    media: base64, // The image data
-                    mediaType: type
+                    media: evt.target.result,
+                    mediaType: file.type.startsWith('video') ? 'video' : 'image'
                 });
             };
             reader.readAsDataURL(file);
-            // Clear input so same file can be selected again
             fileInput.value = ""; 
         });
     }
@@ -286,34 +299,18 @@
       const userSpan = document.createElement("span");
       userSpan.className = "message-user" + (isAdmin ? " admin-viewable" : "");
       userSpan.textContent = isOwn ? "You" : msg.username;
+      userSpan.onclick = () => showProfile(msg.userId); // PROFILE TRIGGER
+      
       if (msg.isAdminMsg && msg.style?.nameColor) userSpan.style.color = msg.style.nameColor;
 
-      if (isAdmin && !isOwn) {
-        const tooltip = document.createElement("div");
-        tooltip.className = "admin-tooltip";
-        tooltip.innerHTML = `
-          <b style="color:#4285f4">${msg.email}</b><br>
-          <div style="display:flex; gap:5px; justify-content:center; margin-top:8px;">
-            <button style="background:#ff8800; border:none; color:white; padding:5px; border-radius:4px; font-size:9px; cursor:pointer;" onclick="adminMute('${msg.userId}')">MUTE</button>
-            <button style="background:#ea4335; border:none; color:white; padding:5px; border-radius:4px; font-size:9px; cursor:pointer;" onclick="adminBan('${msg.userId}')">BAN</button>
-          </div>
-        `;
-        userSpan.appendChild(tooltip);
-      }
-
       const contentDiv = document.createElement("div");
-      
-      // Text Content
-      if (msg.text) {
-          contentDiv.textContent = msg.text;
-      }
+      if (msg.text) contentDiv.textContent = msg.text;
 
-      // Media Content (Image/Video)
       if (msg.media) {
           const mediaEl = document.createElement(msg.mediaType === 'video' ? 'video' : 'img');
           mediaEl.src = msg.media;
           mediaEl.className = 'chat-media';
-          mediaEl.onclick = () => openMediaModal(msg.media, msg.mediaType);
+          mediaEl.onclick = (e) => { e.stopPropagation(); openMediaModal(msg.media, msg.mediaType); };
           contentDiv.appendChild(mediaEl);
       }
 
@@ -328,6 +325,20 @@
       div.append(userSpan, contentDiv);
       document.getElementById("chatBox").appendChild(div);
     }
+
+    /* PROFILE CARD LOGIC */
+    window.showProfile = async (uid) => {
+        const snap = await get(ref(database, `users/${uid}`));
+        if (snap.exists()) {
+            const data = snap.val();
+            document.getElementById('cardName').textContent = data.username || "User";
+            document.getElementById('cardEmail').textContent = isAdmin ? (data.email || "") : "";
+            document.getElementById('cardBio').textContent = data.bio ? `"${data.bio}"` : "No bio yet.";
+            document.getElementById('cardPfp').src = data.pfp || "https://ui-avatars.com/api/?background=random&name=" + (data.username || "U");
+            document.getElementById('profileCardModal').style.display = 'flex';
+        }
+    };
+    window.closeProfileCard = () => document.getElementById('profileCardModal').style.display = 'none';
 
     function setupTypingLogic() {
       const input = document.getElementById('messageInput');
@@ -352,24 +363,10 @@
       const memberPromises = uids.map(async (uid) => {
         const userSnap = await get(child(ref(database), `users/${uid}`));
         const userData = userSnap.val() || {};
-        const isMuted = userData.isBanned === true;
         const div = document.createElement('div');
-        div.className = 'member-item';
-        div.innerHTML = `<div class="member-name">${userData.username || onlineData[uid].username} ${isMuted ? '<span style="color:#ff8800; font-size:10px;">[MUTED]</span>' : ''}</div>`;
-        if (isAdmin && uid !== currentUser.uid) {
-          const btnGroup = document.createElement('div');
-          btnGroup.style.display = 'flex'; btnGroup.style.gap = '5px';
-          const muteBtn = document.createElement('button');
-          muteBtn.textContent = isMuted ? 'UNMUTE' : 'MUTE';
-          muteBtn.style = "background:#666; color:white; border:none; padding:4px 8px; font-size:10px; cursor:pointer; border-radius:4px;";
-          muteBtn.onclick = () => adminMute(uid);
-          const banBtn = document.createElement('button');
-          banBtn.textContent = 'BAN';
-          banBtn.style = "background:#ea4335; color:white; border:none; padding:4px 8px; font-size:10px; cursor:pointer; border-radius:4px;";
-          banBtn.onclick = () => adminBan(uid);
-          btnGroup.append(muteBtn, banBtn);
-          div.appendChild(btnGroup);
-        }
+        div.style = "display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(128,128,128,0.1); cursor:pointer;";
+        div.onclick = () => showProfile(uid);
+        div.innerHTML = `<span>${userData.username || onlineData[uid].username} ${userData.isBanned ? '🚫' : ''}</span>`;
         return div;
       });
       const memberEls = await Promise.all(memberPromises);
@@ -378,52 +375,27 @@
       document.getElementById('onlineCount').textContent = uids.length;
     }
 
-    // --- Ban Manager Functions ---
     window.openBanManager = async () => {
       document.getElementById('modalOverlay').style.display = 'block';
       document.getElementById('banManagerModal').style.display = 'block';
       const list = document.getElementById('banListContent');
       list.innerHTML = "Loading...";
-
       const usersSnap = await get(ref(database, 'users'));
       list.innerHTML = "";
-      let found = false;
-
       usersSnap.forEach((childSnap) => {
         const u = childSnap.val();
-        const uid = childSnap.key;
         if (u.isBanned || u.kicked) {
-          found = true;
           const div = document.createElement('div');
-          div.className = 'ban-item';
-          div.innerHTML = `
-            <div>
-              <div style="font-weight:bold;">${u.username}</div>
-              <div style="font-size:10px; color:#888;">${u.kicked ? 'PERMA-BANNED' : 'MUTED'}</div>
-            </div>
-            <button onclick="unbanUser('${uid}')" style="background:#4285f4; border:none; color:white; padding:5px 10px; border-radius:4px; font-size:10px; cursor:pointer;">RESTORE</button>
-          `;
+          div.style = "display:flex; justify-content:space-between; margin-bottom:10px;";
+          div.innerHTML = `<span>${u.username} (${u.kicked ? 'BANNED' : 'MUTED'})</span>
+                           <button onclick="unbanUser('${childSnap.key}')">RESTORE</button>`;
           list.appendChild(div);
         }
       });
-      if (!found) list.innerHTML = "No banned users found.";
     };
 
-    window.unbanUser = async (uid) => {
-      await update(ref(database, `users/${uid}`), { kicked: false, isBanned: false });
-      openBanManager(); // Refresh list
-    };
-
-    window.adminMute = async (uid) => {
-      const s = await get(child(ref(database), `users/${uid}`));
-      update(ref(database, `users/${uid}`), { isBanned: !s.val()?.isBanned });
-    };
-
-    window.adminBan = (uid) => {
-      if(confirm("Kick and permanently ban this user?")) update(ref(database, `users/${uid}`), { kicked: true });
-    };
-
-    window.clearChat = () => { if(confirm("Clear chat?")) remove(ref(database, 'messages')); };
+    window.unbanUser = async (uid) => { await update(ref(database, `users/${uid}`), { kicked: false, isBanned: false }); openBanManager(); };
+    window.clearChat = () => { if(confirm("Clear all messages?")) remove(ref(database, 'messages')); };
     
     window.sendMessage = () => {
       const input = document.getElementById("messageInput");
@@ -436,39 +408,20 @@
       set(ref(database, `typing/${currentUser.uid}`), null);
     };
 
-    // --- Media Modal Logic ---
     window.openMediaModal = (src, type) => {
         const modal = document.getElementById('mediaModal');
         const img = document.getElementById('modalImg');
         const video = document.getElementById('modalVideo');
-        
         modal.style.display = 'flex';
-        
-        if (type === 'video') {
-            img.style.display = 'none';
-            video.style.display = 'block';
-            video.src = src;
-        } else {
-            video.style.display = 'none';
-            video.pause();
-            img.style.display = 'block';
-            img.src = src;
-        }
+        if (type === 'video') { img.style.display = 'none'; video.style.display = 'block'; video.src = src; }
+        else { video.style.display = 'none'; img.style.display = 'block'; img.src = src; }
     };
 
-    window.closeMediaModal = () => {
-        const modal = document.getElementById('mediaModal');
-        modal.style.display = 'none';
-        document.getElementById('modalVideo').pause();
-    };
-
+    window.closeMediaModal = () => { document.getElementById('mediaModal').style.display = 'none'; document.getElementById('modalVideo').pause(); };
     window.toggleMemberList = () => document.getElementById('memberList').classList.toggle('open');
     window.openAdminSettings = () => { document.getElementById('modalOverlay').style.display = 'block'; document.getElementById('adminModal').style.display = 'block'; };
-    window.closeAllModals = () => { 
-      document.querySelectorAll('.admin-modal, .modal-overlay').forEach(el => el.style.display = 'none'); 
-    };
+    window.closeAllModals = () => document.querySelectorAll('.admin-modal, .modal-overlay, #profileCardModal').forEach(el => el.style.display = 'none');
     window.closeBanManager = () => closeAllModals();
-    window.closeAdminSettings = () => closeAllModals();
     window.saveAdminSettings = () => {
       update(ref(database, 'adminSettings/global'), {
         gradient: document.getElementById('gradientToggle').checked,
