@@ -1,182 +1,525 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus - Secure Chat</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus - Chat</title>
+  <link rel="icon" type="image/png" href="icon.png"> 
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* --- Chat Layout --- */
+    #chatBox {
+      position: absolute; top: 70px; left: 0; right: 0; bottom: 85px;
+      padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+      z-index: 2;
+    }
+    
+    #typingIndicator {
+      position: fixed; bottom: 85px; left: 20px; font-size: 12px;
+      font-style: italic; color: #888; height: 15px; z-index: 5;
+    }
+
+    /* Progress Bar */
+    #uploadProgressContainer {
+        position: fixed; top: 65px; left: 0; width: 100%; height: 4px;
+        background: rgba(0,0,0,0.1); z-index: 1000; display: none;
+    }
+    #uploadProgressBar {
+        width: 0%; height: 100%; background: #4285f4; transition: width 0.2s;
+    }
+
+    /* Message Bubbles */
+    .message {
+      padding: 10px 15px; border-radius: 18px; max-width: 75%;
+      word-wrap: break-word; animation: messageFade 0.3s ease; position: relative;
+    }
+    .message.own { background: #4285f4; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .message.other { background: #e0e0e0; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; }
+    body.dark-mode .message.other { background: #333; color: white; }
+
+    /* Media Styles */
+    .chat-media {
+        display: block; max-width: 100%; max-height: 250px;
+        margin-top: 8px; border-radius: 8px; cursor: pointer;
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    /* MODALS GENERAL */
+    #mediaModal, #profileCardModal {
+        display: none; position: fixed; inset: 0; 
+        background: rgba(0,0,0,0.9); z-index: 9999; 
+        align-items: center; justify-content: center;
+    }
+    #mediaModal img, #mediaModal video {
+        max-width: 95%; max-height: 95%; border-radius: 8px;
+    }
+    .close-btn {
+        position: absolute; top: 20px; right: 30px; 
+        color: white; font-size: 40px; cursor: pointer; z-index: 10000;
+    }
+
+    /* PROFILE CARD STYLES */
+    .profile-card {
+      background: white; width: 320px; border-radius: 20px;
+      overflow: hidden; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+    }
+    body.dark-mode .profile-card { background: #222; color: white; }
+    .card-header { height: 80px; background: #4285f4; }
+    .card-pfp {
+      width: 100px; height: 100px; border-radius: 50%; 
+      border: 5px solid white; margin-top: -50px;
+      background: #eee; object-fit: cover;
+    }
+    body.dark-mode .card-pfp { border-color: #222; }
+    .card-content { padding: 20px; }
+    .card-name { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
+    .card-bio { font-size: 14px; color: #666; font-style: italic; margin-top: 10px; }
+    body.dark-mode .card-bio { color: #bbb; }
+
+    /* Admin Specials & Tooltip */
+    .message.admin-gradient {
+      background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+      background-size: 300% 300%;
+      box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+      color: white !important;
+    }
+    .message.admin-gradient.animate { animation: gradientShift 6s ease infinite; }
+
+    .message-user { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; position: relative; cursor: pointer; }
+    .message-user:hover { text-decoration: underline; }
+    .admin-viewable { text-decoration: underline dotted #4285f4; cursor: help; }
+
+    .admin-tooltip {
+      visibility: hidden; width: 180px; background-color: #222; color: #fff;
+      text-align: center; border-radius: 6px; padding: 10px;
+      position: absolute; z-index: 100; bottom: 125%; left: 0;
+      opacity: 0; transition: opacity 0.2s; border: 1px solid #444; font-weight: normal; font-size: 11px;
+    }
+    .message-user:hover .admin-tooltip { visibility: visible; opacity: 1; }
+
+    @keyframes messageFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    @keyframes modalPop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+
+    /* Input Bar */
+    #messageInputBox {
+      position: fixed; left: 0; right: 0; bottom: 0; height: 80px;
+      padding: 15px 20px; background: rgba(255,255,255,0.95);
+      display: flex; gap: 10px; align-items: center; border-top: 1px solid #ddd; z-index: 10;
+      backdrop-filter: blur(10px);
+    }
+    body.dark-mode #messageInputBox { background: rgba(20,20,20,0.95); border-top: 1px solid #333; }
+    #messageInput { flex: 1; padding: 12px 20px; border-radius: 30px; border: 1px solid #ddd; outline: none; }
+    body.dark-mode #messageInput { background: #111; color: white; border-color: #444; }
+
+    /* Drawers and Modals */
+    #memberList {
+      position: fixed; right: -320px; top: 0; width: 300px; height: 100vh;
+      background: white; border-left: 1px solid #ddd; transition: 0.3s; z-index: 4000; padding: 20px;
+      display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+    }
+    body.dark-mode #memberList { background: #1a1a1a; border-left: 1px solid #333; color: white; }
+    #memberList.open { right: 0; }
+
+    .admin-modal {
+      display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); 
+      background:#222; color:white; padding:30px; border-radius:12px; z-index:5001; 
+      border:1px solid #444; width:350px; max-height: 80vh; overflow-y: auto;
+    }
+    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:5000; }
+  </style>
 </head>
 <body>
 
-    <canvas id="particleCanvas"></canvas>
+  <canvas id="particleCanvas"></canvas>
+  <script src="global.js"></script>
 
-    <div id="chatBox"></div>
-    <div id="typingIndicator"></div>
+  <div id="uploadProgressContainer">
+      <div id="uploadProgressBar"></div>
+  </div>
 
-    <div id="messageInputBox">
-        <label for="fileInput" class="file-btn">📷</label>
-        <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
-        
-        <input id="messageInput" type="text" placeholder="Type a message..." autocomplete="off">
-        <button id="sendBtn" class="send-btn">➤</button>
-    </div>
+  <div id="mediaModal">
+      <div class="close-btn" onclick="closeMediaModal()">&times;</div>
+      <img id="modalImg" alt="Expanded" style="display:none;">
+      <video id="modalVideo" controls style="display:none;"></video>
+  </div>
+
+  <div id="profileCardModal" onclick="closeProfileCard()">
+      <div class="profile-card" onclick="event.stopPropagation()">
+          <div class="card-header"></div>
+          <img id="cardPfp" src="" class="card-pfp">
+          <div class="card-content">
+              <div id="cardName" class="card-name">Username</div>
+              <div id="cardEmail" style="font-size: 12px; color: #888;"></div>
+              <p id="cardBio" class="card-bio">"No bio yet."</p>
+          </div>
+      </div>
+  </div>
+
+  <div id="memberList">
+    <button style="background:none; border:none; font-size:24px; cursor:pointer; color:inherit; align-self:flex-end;" onclick="toggleMemberList()">×</button>
+    <h3 style="margin-bottom:15px;">Online Members (<span id="onlineCount">0</span>)</h3>
+    <div id="memberListContent" style="overflow-y:auto; flex:1;"></div>
+  </div>
+
+  <div id="adminModal" class="admin-modal">
+    <h3 style="margin-bottom:15px;">Admin Style</h3>
+    <input type="color" id="bubbleColorInput" style="width:100%; height:40px; margin-bottom:10px;">
+    <input type="color" id="nameColorInput" style="width:100%; height:40px; margin-bottom:10px;">
+    <label><input type="checkbox" id="gradientToggle"> Gradient</label><br>
+    <label><input type="checkbox" id="animateToggle"> Animation</label><br><br>
+    <button onclick="saveAdminSettings()" style="width:100%; padding:10px; background:#4285f4; border:none; color:white; border-radius:5px; font-weight:bold; cursor:pointer;">SAVE</button>
+  </div>
+
+  <div id="banManagerModal" class="admin-modal">
+    <h3 style="margin-bottom:15px;">Manage Bans/Mutes</h3>
+    <div id="banListContent"></div>
+    <button onclick="closeBanManager()" style="width:100%; margin-top:20px; padding:10px; background:#444; border:none; color:white; border-radius:5px; cursor:pointer;">CLOSE</button>
+  </div>
+
+  <div id="modalOverlay" class="modal-overlay" onclick="closeAllModals()"></div>
+
+  <div id="topActions" style="position: fixed; top: 75px; right: 20px; z-index: 10; display: flex; gap: 10px;">
+    <button id="adminClearBtn" onclick="clearChat()" style="display:none; background:#ea4335; border:none; color:white; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">CLEAR CHAT</button>
+    <button id="adminBanBtn" onclick="openBanManager()" style="display:none; background:#ff8800; border:none; color:white; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">BANS</button>
+    <button onclick="toggleMemberList()" style="background:#4285f4; border:none; color:white; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">👥 MEMBERS</button>
+    <button id="adminSettingsBtn" onclick="openAdminSettings()" style="display:none; background:#333; border:none; color:white; padding:8px 12px; border-radius:5px; cursor:pointer;">⚙️</button>
+  </div>
+
+  <div id="chatBox"></div>
+  <div id="typingIndicator"></div>
+
+  <div id="messageInputBox">
+    <label for="fileInput" style="cursor:pointer; font-size:24px; padding: 0 10px; color: #4285f4;">📷</label>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
     
-    <div id="uploadProgress"></div>
+    <input id="messageInput" type="text" placeholder="Type a message..." autocomplete="off">
+    <button id="sendBtn" onclick="sendMessage()" style="padding:12px 25px; background:#4285f4; color:white; border:none; border-radius:30px; cursor:pointer; font-weight:bold;">Send</button>
+  </div>
 
-    <div id="profileModal" class="modal" onclick="this.style.display='none'">
-        <div class="modal-content profile-card" onclick="event.stopPropagation()">
-            <div class="card-header-bg"></div>
-            <img id="modalPfp" class="big-pfp">
-            <h2 id="modalName">User</h2>
-            <p id="modalBio" style="font-style:italic; margin-top:10px;">"No bio set."</p>
-        </div>
-    </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { 
+      getDatabase, ref, push, remove, set, update, onChildAdded, onChildRemoved, 
+      onValue, get, child, serverTimestamp, query, orderByChild, onDisconnect 
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-    <div id="mediaModal" class="modal" onclick="this.style.display='none'">
-        <div style="position:relative; max-width:90%; max-height:90%;">
-            <img id="expandedImg" style="max-width:100%; max-height:80vh; border-radius:8px; display:none;">
-            <video id="expandedVideo" controls style="max-width:100%; max-height:80vh; border-radius:8px; display:none;"></video>
-        </div>
-    </div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
+      authDomain: "chat-or-somethig.firebaseapp.com",
+      databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
+      projectId: "chat-or-somethig",
+      storageBucket: "chat-or-somethig.firebasestorage.app",
+      messagingSenderId: "598777875087",
+      appId: "1:598777875087:web:d100536dd269bc0a9d7efa"
+    };
 
-    <script src="particles.js"></script>
-    <script type="module" src="global.js"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-        import { getDatabase, ref, push, remove, set, update, onChildAdded, onChildRemoved, onValue, get, serverTimestamp, query, orderByChild } 
-        from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const database = getDatabase(app);
 
-        // Firebase Setup
-        const firebaseConfig = {
-            apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
-            authDomain: "chat-or-somethig.firebaseapp.com",
-            databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
-            projectId: "chat-or-somethig",
-            storageBucket: "chat-or-somethig.firebasestorage.app",
-            messagingSenderId: "598777875087",
-            appId: "1:598777875087:web:d100536dd269bc0a9d7efa"
-        };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
+    let currentUser = null, currentUsername = "User", isAdmin = false, isBanned = false;
+    let adminSettings = { gradient: true, animate: true, bubbleColor: "#667eea", nameColor: "#ffffff" };
 
-        let currentUser = null, currentUsername = "Guest", currentPfp = "", isAdmin = false, isBanned = false;
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = 'Home.html'; return; }
+      currentUser = user;
 
-        onAuthStateChanged(auth, (user) => {
-            if (!user) return;
-            currentUser = user;
-            
-            onValue(ref(db, `users/${user.uid}`), (snap) => {
-                const data = snap.val() || {};
-                currentUsername = data.username || user.email.split('@')[0];
-                isAdmin = data.isAdmin === true;
-                isBanned = data.isBanned === true;
-                
-                const input = document.getElementById('messageInput');
-                input.disabled = isBanned;
-                if(isBanned) input.placeholder = "YOU ARE MUTED";
-            });
+      onValue(ref(database, `users/${user.uid}`), (snap) => {
+        const data = snap.val() || {};
+        currentUsername = data.username || user.email.split('@')[0];
+        isAdmin = data.isAdmin === true;
+        isBanned = data.isBanned === true;
 
-            setupChat();
-            setupTyping();
-            setupFileUpload();
-        });
-
-        function setupChat() {
-            const q = query(ref(db, 'messages'), orderByChild('timestamp'));
-            onChildAdded(q, (snapshot) => {
-                renderMessage(snapshot.key, snapshot.val());
-                const box = document.getElementById("chatBox");
-                box.scrollTop = box.scrollHeight;
-            });
-            onChildRemoved(ref(db, 'messages'), (snapshot) => {
-                const el = document.getElementById(`row-${snapshot.key}`);
-                if(el) el.remove();
-            });
+        if (data.kicked && !isAdmin) {
+          alert("Banned.");
+          signOut(auth).then(() => window.location.href = 'Home.html');
+          return;
         }
 
-        function renderMessage(key, msg) {
-            const isOwn = (msg.userId === currentUser.uid);
-            const row = document.createElement("div");
-            row.id = `row-${key}`;
-            row.className = `msg-row ${isOwn ? 'own' : 'other'}`;
+        document.getElementById('adminClearBtn').style.display = isAdmin ? 'block' : 'none';
+        document.getElementById('adminBanBtn').style.display = isAdmin ? 'block' : 'none';
+        document.getElementById('adminSettingsBtn').style.display = isAdmin ? 'block' : 'none';
+        document.getElementById('messageInput').disabled = isBanned;
+        document.getElementById('messageInput').placeholder = isBanned ? "MUTED" : "Type a message...";
+        
+        updateStatus();
+      });
 
-            const bubble = document.createElement("div");
-            bubble.className = `message ${isOwn ? 'own' : 'other'}`;
-            
-            // Text Content
-            const content = document.createElement("div");
-            content.textContent = msg.text || "";
-            
-            // Media Content
-            if (msg.media) {
-                const media = document.createElement(msg.mediaType === 'video' ? 'video' : 'img');
-                media.src = msg.media;
-                media.style.maxWidth = "100%";
-                media.style.borderRadius = "8px";
-                media.onclick = () => window.openMedia(msg.media, msg.mediaType);
-                content.appendChild(media);
-            }
+      onValue(ref(database, 'adminSettings/global'), (s) => { if(s.exists()) adminSettings = s.val(); });
+      setupChat();
+      setupTypingLogic();
+      setupFileUpload();
+    });
 
-            bubble.appendChild(content);
-            row.appendChild(bubble);
-            document.getElementById("chatBox").appendChild(row);
-        }
+    function updateStatus() {
+      if (!currentUser) return;
+      const statusRef = ref(database, `online/${currentUser.uid}`);
+      set(statusRef, { username: currentUsername, timestamp: serverTimestamp() });
+      onDisconnect(statusRef).remove();
+    }
 
-        // Global Actions
-        document.getElementById('sendBtn').onclick = () => {
-            const txt = document.getElementById('messageInput').value;
-            if(!txt.trim() || isBanned) return;
-            push(ref(db, 'messages'), {
-                text: txt,
-                username: currentUsername,
-                userId: currentUser.uid,
-                timestamp: serverTimestamp()
-            });
-            document.getElementById('messageInput').value = "";
-        };
+    function setupChat() {
+      const messagesRef = query(ref(database, 'messages'), orderByChild('timestamp'));
+      onChildAdded(messagesRef, (s) => {
+        renderMessage(s.key, s.val());
+        const cb = document.getElementById("chatBox");
+        cb.scrollTop = cb.scrollHeight;
+      });
+      onChildRemoved(ref(database, 'messages'), (s) => {
+        const el = document.getElementById(`msg-${s.key}`);
+        if (el) el.remove();
+      });
+      onValue(ref(database, 'online'), (snap) => {
+          updateMemberList(snap.val() || {});
+      });
+    }
 
-        window.openMedia = (src, type) => {
-            const m = document.getElementById('mediaModal');
-            m.style.display = 'flex';
-            if(type==='video') {
-                document.getElementById('expandedVideo').style.display='block';
-                document.getElementById('expandedVideo').src = src;
-            } else {
-                document.getElementById('expandedImg').style.display='block';
-                document.getElementById('expandedImg').src = src;
-            }
-        };
+    function setupFileUpload() {
+        const fileInput = document.getElementById('fileInput');
+        const progressContainer = document.getElementById('uploadProgressContainer');
+        const progressBar = document.getElementById('uploadProgressBar');
 
-        function setupTyping() {
-            const inp = document.getElementById('messageInput');
-            inp.addEventListener('input', () => {
-                set(ref(db, `typing/${currentUser.uid}`), { username: currentUsername });
-                setTimeout(() => set(ref(db, `typing/${currentUser.uid}`), null), 2000);
-            });
-            onValue(ref(db, 'typing'), (snap) => {
-                const val = snap.val() || {};
-                const names = Object.keys(val).filter(k => k !== currentUser.uid).map(k => val[k].username);
-                document.getElementById('typingIndicator').textContent = names.length ? names.join(", ") + " typing..." : "";
-            });
-        }
+        fileInput.addEventListener('change', async function(e) {
+            if (isBanned) { alert("You are muted."); return; }
+            const file = e.target.files[0];
+            if (!file) return;
 
-        function setupFileUpload() {
-            document.getElementById('fileInput').onchange = async (e) => {
-                const file = e.target.files[0];
-                const formData = new FormData();
-                formData.append("file", file);
-                formData.append("upload_preset", "z1d4s4al");
-                const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { method: "POST", body: formData });
-                const data = await res.json();
-                push(ref(db, 'messages'), {
-                    username: currentUsername, userId: currentUser.uid,
-                    media: data.secure_url, mediaType: data.resource_type,
-                    timestamp: serverTimestamp()
+            // Show Progress Bar
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '10%'; 
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("upload_preset", "z1d4s4al"); 
+
+            try {
+                // Cloudinary fetch
+                const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { 
+                    method: "POST", 
+                    body: formData 
                 });
-            };
+                
+                progressBar.style.width = '100%';
+
+                if (!res.ok) throw new Error("Cloudinary upload failed");
+                const data = await res.json();
+                
+                if(data.secure_url) {
+                    push(ref(database, 'messages'), {
+                        username: currentUsername,
+                        userId: currentUser.uid,
+                        email: currentUser.email,
+                        isAdminMsg: isAdmin,
+                        style: isAdmin ? adminSettings : null,
+                        timestamp: serverTimestamp(),
+                        media: data.secure_url,
+                        mediaType: data.resource_type === 'video' ? 'video' : 'image'
+                    });
+                }
+            } catch(err) {
+                alert("Upload failed: " + err.message);
+            } finally {
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                }, 500);
+                fileInput.value = ""; 
+            }
+        });
+    }
+
+    async function renderMessage(id, msg) {
+      const isOwn = currentUser && msg.userId === currentUser.uid;
+      const div = document.createElement("div");
+      div.id = `msg-${id}`;
+      div.className = `message ${isOwn ? 'own' : 'other'}`;
+      
+      if (msg.isAdminMsg && msg.style) {
+        if (msg.style.gradient) {
+          div.classList.add('admin-gradient');
+          if (msg.style.animate) div.classList.add('animate');
+        } else { div.style.background = msg.style.bubbleColor; }
+      }
+
+      const userSpan = document.createElement("span");
+      userSpan.className = "message-user" + (isAdmin ? " admin-viewable" : "");
+      userSpan.textContent = isOwn ? "You" : msg.username;
+      userSpan.onclick = () => showProfile(msg.userId); 
+      
+      if (msg.isAdminMsg && msg.style?.nameColor) userSpan.style.color = msg.style.nameColor;
+
+      if (isAdmin && !isOwn) {
+        const tooltip = document.createElement("div");
+        tooltip.className = "admin-tooltip";
+        tooltip.onclick = (e) => e.stopPropagation();
+        tooltip.innerHTML = `
+          <b style="color:#4285f4">${msg.email || 'No email'}</b><br>
+          <div style="display:flex; gap:5px; justify-content:center; margin-top:8px;">
+            <button style="background:#ff8800; border:none; color:white; padding:5px; border-radius:4px; font-size:9px; cursor:pointer;" onclick="adminMute('${msg.userId}')">MUTE</button>
+            <button style="background:#ea4335; border:none; color:white; padding:5px; border-radius:4px; font-size:9px; cursor:pointer;" onclick="adminBan('${msg.userId}')">BAN</button>
+          </div>
+        `;
+        userSpan.appendChild(tooltip);
+      }
+
+      const contentDiv = document.createElement("div");
+      if (msg.text) {
+          const textEl = document.createElement('span');
+          textEl.textContent = msg.text;
+          contentDiv.appendChild(textEl);
+      }
+
+      if (msg.media) {
+          const isVideo = msg.mediaType === 'video';
+          const mediaEl = document.createElement(isVideo ? 'video' : 'img');
+          mediaEl.src = msg.media;
+          mediaEl.className = 'chat-media';
+          if(isVideo) {
+              mediaEl.muted = true;
+              mediaEl.loop = true;
+              mediaEl.setAttribute('playsinline', '');
+          }
+          mediaEl.onclick = (e) => { e.stopPropagation(); openMediaModal(msg.media, msg.mediaType); };
+          contentDiv.appendChild(mediaEl);
+      }
+
+      if (isAdmin || isOwn) {
+        const del = document.createElement("span");
+        del.style = "margin-left:8px; cursor:pointer; opacity:0.5; float:right;";
+        del.innerHTML = "&times;";
+        del.onclick = (e) => { e.stopPropagation(); remove(ref(database, `messages/${id}`)); };
+        contentDiv.appendChild(del);
+      }
+      
+      div.append(userSpan, contentDiv);
+      document.getElementById("chatBox").appendChild(div);
+    }
+
+    /* PROFILE CARD LOGIC */
+    window.showProfile = async (uid) => {
+        const snap = await get(ref(database, `users/${uid}`));
+        if (snap.exists()) {
+            const data = snap.val();
+            document.getElementById('cardName').textContent = data.username || "User";
+            document.getElementById('cardEmail').textContent = isAdmin ? (data.email || "") : "";
+            document.getElementById('cardBio').textContent = data.bio ? `"${data.bio}"` : "No bio yet.";
+            document.getElementById('cardPfp').src = data.pfp || "https://ui-avatars.com/api/?background=random&name=" + (data.username || "U");
+            document.getElementById('profileCardModal').style.display = 'flex';
         }
-    </script>
+    };
+    window.closeProfileCard = () => document.getElementById('profileCardModal').style.display = 'none';
+
+    function setupTypingLogic() {
+      const input = document.getElementById('messageInput');
+      let typingTimeout;
+      input.addEventListener('input', () => {
+        if (currentUser) {
+          set(ref(database, `typing/${currentUser.uid}`), { username: currentUsername });
+          clearTimeout(typingTimeout);
+          typingTimeout = setTimeout(() => set(ref(database, `typing/${currentUser.uid}`), null), 2000);
+        }
+      });
+      onValue(ref(database, 'typing'), (snap) => {
+        const data = snap.val() || {};
+        const names = Object.entries(data).filter(([uid]) => uid !== currentUser.uid).map(([_, u]) => u.username);
+        document.getElementById('typingIndicator').textContent = names.length > 0 ? `${names.join(', ')} typing...` : "";
+      });
+    }
+
+    async function updateMemberList(onlineData) {
+      const content = document.getElementById('memberListContent');
+      const uids = Object.keys(onlineData);
+      const memberPromises = uids.map(async (uid) => {
+        const userSnap = await get(child(ref(database), `users/${uid}`));
+        const userData = userSnap.val() || {};
+        const div = document.createElement('div');
+        div.style = "display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(128,128,128,0.1); cursor:pointer;";
+        div.onclick = () => showProfile(uid);
+        div.innerHTML = `<span>${userData.username || onlineData[uid].username} ${userData.isBanned ? '🚫' : ''}</span>`;
+        return div;
+      });
+      const memberEls = await Promise.all(memberPromises);
+      content.innerHTML = '';
+      memberEls.forEach(el => content.appendChild(el));
+      document.getElementById('onlineCount').textContent = uids.length;
+    }
+
+    window.openBanManager = async () => {
+      document.getElementById('modalOverlay').style.display = 'block';
+      document.getElementById('banManagerModal').style.display = 'block';
+      const list = document.getElementById('banListContent');
+      list.innerHTML = "Loading...";
+      const usersSnap = await get(ref(database, 'users'));
+      list.innerHTML = "";
+      usersSnap.forEach((childSnap) => {
+        const u = childSnap.val();
+        if (u.isBanned || u.kicked) {
+          const div = document.createElement('div');
+          div.style = "display:flex; justify-content:space-between; margin-bottom:10px;";
+          div.innerHTML = `<span>${u.username} (${u.kicked ? 'BANNED' : 'MUTED'})</span>
+                           <button onclick="unbanUser('${childSnap.key}')">RESTORE</button>`;
+          list.appendChild(div);
+        }
+      });
+    };
+
+    window.unbanUser = async (uid) => { await update(ref(database, `users/${uid}`), { kicked: false, isBanned: false }); openBanManager(); };
+    window.adminMute = async (uid) => {
+      const s = await get(child(ref(database), `users/${uid}`));
+      update(ref(database, `users/${uid}`), { isBanned: !s.val()?.isBanned });
+    };
+    window.adminBan = (uid) => {
+      if(confirm("Kick and permanently ban this user?")) update(ref(database, `users/${uid}`), { kicked: true });
+    };
+
+    window.clearChat = () => { if(confirm("Clear all messages?")) remove(ref(database, 'messages')); };
+    
+    window.sendMessage = () => {
+      const input = document.getElementById("messageInput");
+      if(!input.value.trim() || isBanned) return;
+      push(ref(database, 'messages'), {
+        text: input.value, username: currentUsername, userId: currentUser.uid,
+        email: currentUser.email, isAdminMsg: isAdmin, style: isAdmin ? adminSettings : null, timestamp: serverTimestamp()
+      });
+      input.value = "";
+      set(ref(database, `typing/${currentUser.uid}`), null);
+    };
+
+    window.openMediaModal = (src, type) => {
+        const modal = document.getElementById('mediaModal');
+        const img = document.getElementById('modalImg');
+        const video = document.getElementById('modalVideo');
+        modal.style.display = 'flex';
+        if (type === 'video') { 
+            img.style.display = 'none'; 
+            video.style.display = 'block'; 
+            video.src = src; 
+            video.play();
+        }
+        else { video.style.display = 'none'; img.style.display = 'block'; img.src = src; }
+    };
+
+    window.closeMediaModal = () => { document.getElementById('mediaModal').style.display = 'none'; document.getElementById('modalVideo').pause(); };
+    window.toggleMemberList = () => document.getElementById('memberList').classList.toggle('open');
+    window.openAdminSettings = () => { document.getElementById('modalOverlay').style.display = 'block'; document.getElementById('adminModal').style.display = 'block'; };
+    window.closeAllModals = () => document.querySelectorAll('.admin-modal, .modal-overlay, #profileCardModal').forEach(el => el.style.display = 'none');
+    window.closeBanManager = () => closeAllModals();
+    window.saveAdminSettings = () => {
+      update(ref(database, 'adminSettings/global'), {
+        gradient: document.getElementById('gradientToggle').checked,
+        animate: document.getElementById('animateToggle').checked,
+        bubbleColor: document.getElementById('bubbleColorInput').value,
+        nameColor: document.getElementById('nameColorInput').value
+      });
+      closeAllModals();
+    };
+
+    document.getElementById("messageInput").addEventListener("keypress", (e) => { if(e.key === 'Enter') sendMessage(); });
+  </script>
+  <script src="particles.js"></script>
 </body>
 </html>
