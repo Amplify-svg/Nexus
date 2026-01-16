@@ -39,7 +39,7 @@
 
     /* Header with PFP */
     .message-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer; }
-    .msg-pfp { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: #ccc; }
+    .msg-pfp { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: #ccc; flex-shrink: 0; }
     .message-user { font-size: 11px; font-weight: bold; }
     .message-time { font-size: 9px; opacity: 0.6; margin-left: 5px; }
 
@@ -84,6 +84,17 @@
     .card-name { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
     .card-bio { font-size: 14px; color: #666; font-style: italic; margin-top: 10px; }
     body.dark-mode .card-bio { color: #bbb; }
+
+    /* Sound Interaction Overlay */
+    #audioGate {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.8); 
+        z-index: 10000; display: flex; flex-direction: column; 
+        align-items: center; justify-content: center; color: white;
+    }
+    #audioGate button {
+        padding: 15px 30px; background: #4285f4; border: none; 
+        color: white; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 18px;
+    }
 
     .message.admin-gradient {
       background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
@@ -132,6 +143,13 @@
   </style>
 </head>
 <body>
+
+  <div id="audioGate">
+      <h2 style="margin-bottom: 20px;">Ready to Chat?</h2>
+      <button onclick="unlockAudio()">Enter Nexus</button>
+  </div>
+
+  <audio id="notifSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
   <canvas id="particleCanvas"></canvas>
   <script src="global.js"></script>
@@ -219,37 +237,53 @@
 
     let currentUser = null, currentUsername = "User", currentPfp = "", isAdmin = false, isBanned = false;
     let adminSettings = { gradient: true, animate: true, bubbleColor: "#667eea", nameColor: "#ffffff" };
+    let hasLoadedChat = false;
+    let initialLoad = true;
+
+    // --- AUDIO UNLOCK ---
+    window.unlockAudio = () => {
+        document.getElementById('audioGate').style.display = 'none';
+        // Play and pause immediately to satisfy browser requirements
+        const sound = document.getElementById('notifSound');
+        sound.play().then(() => { sound.pause(); sound.currentTime = 0; });
+    };
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) { window.location.href = 'Home.html'; return; }
       currentUser = user;
 
-      onValue(ref(database, `users/${user.uid}`), (snap) => {
-        const data = snap.val() || {};
-        currentUsername = data.username || user.email.split('@')[0];
-        currentPfp = data.pfp || "";
-        isAdmin = data.isAdmin === true;
-        isBanned = data.isBanned === true;
+      const userSnap = await get(ref(database, `users/${user.uid}`));
+      const data = userSnap.val() || {};
+      currentUsername = data.username || user.email.split('@')[0];
+      currentPfp = data.pfp || "";
+      isAdmin = data.isAdmin === true;
+      isBanned = data.isBanned === true;
 
-        if (data.kicked && !isAdmin) {
-          alert("Banned.");
-          signOut(auth).then(() => window.location.href = 'Home.html');
-          return;
-        }
+      onValue(ref(database, `users/${user.uid}`), (snap) => {
+        const d = snap.val() || {};
+        currentUsername = d.username || currentUsername;
+        currentPfp = d.pfp || currentPfp;
+        isAdmin = d.isAdmin === true;
+        isBanned = d.isBanned === true;
+        if (d.kicked && !isAdmin) signOut(auth).then(() => window.location.href = 'Home.html');
 
         document.getElementById('adminClearBtn').style.display = isAdmin ? 'block' : 'none';
         document.getElementById('adminBanBtn').style.display = isAdmin ? 'block' : 'none';
         document.getElementById('adminSettingsBtn').style.display = isAdmin ? 'block' : 'none';
         document.getElementById('messageInput').disabled = isBanned;
         document.getElementById('messageInput').placeholder = isBanned ? "MUTED" : "Type a message...";
-        
-        updateStatus();
       });
 
-      onValue(ref(database, 'adminSettings/global'), (s) => { if(s.exists()) adminSettings = s.val(); });
-      setupChat();
-      setupTypingLogic();
-      setupFileUpload();
+      if (!hasLoadedChat) {
+          updateStatus();
+          onValue(ref(database, 'adminSettings/global'), (s) => { if(s.exists()) adminSettings = s.val(); });
+          setupChat();
+          setupTypingLogic();
+          setupFileUpload();
+          hasLoadedChat = true;
+          // After 2 seconds, assume the "history" is loaded so we don't ding for old messages
+          setTimeout(() => { initialLoad = false; }, 2000);
+      }
     });
 
     function updateStatus() {
@@ -261,10 +295,20 @@
 
     function setupChat() {
       const messagesRef = query(ref(database, 'messages'), orderByChild('timestamp'));
+      document.getElementById("chatBox").innerHTML = "";
+
       onChildAdded(messagesRef, (s) => {
-        renderMessage(s.key, s.val());
+        const msg = s.val();
+        renderMessage(s.key, msg);
         const cb = document.getElementById("chatBox");
         cb.scrollTop = cb.scrollHeight;
+
+        // --- PLAY SOUND LOGIC ---
+        if (!initialLoad && msg.userId !== currentUser.uid) {
+            const sound = document.getElementById('notifSound');
+            sound.currentTime = 0;
+            sound.play().catch(e => console.log("Sound blocked: ", e));
+        }
       });
       onChildRemoved(ref(database, 'messages'), (s) => {
         const el = document.getElementById(`msg-${s.key}`);
@@ -275,49 +319,37 @@
 
     function setupFileUpload() {
         const fileInput = document.getElementById('fileInput');
-        const progressContainer = document.getElementById('uploadProgressContainer');
-        const progressBar = document.getElementById('uploadProgressBar');
-
         fileInput.addEventListener('change', async function(e) {
-            if (isBanned) { alert("You are muted."); return; }
+            if (isBanned) return;
             const file = e.target.files[0];
             if (!file) return;
-
-            progressContainer.style.display = 'block';
-            progressBar.style.width = '10%'; 
-
+            document.getElementById('uploadProgressContainer').style.display = 'block';
+            document.getElementById('uploadProgressBar').style.width = '10%'; 
             const formData = new FormData();
             formData.append("file", file);
             formData.append("upload_preset", "z1d4s4al"); 
-
             try {
                 const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { method: "POST", body: formData });
-                progressBar.style.width = '100%';
+                document.getElementById('uploadProgressBar').style.width = '100%';
                 if (!res.ok) throw new Error("Upload failed");
                 const data = await res.json();
-                
                 if(data.secure_url) {
                     push(ref(database, 'messages'), {
-                        username: currentUsername,
-                        userId: currentUser.uid,
-                        userPfp: currentPfp,
-                        email: currentUser.email,
-                        isAdminMsg: isAdmin,
-                        style: isAdmin ? adminSettings : null,
-                        timestamp: serverTimestamp(),
-                        media: data.secure_url,
-                        mediaType: data.resource_type === 'video' ? 'video' : 'image'
+                        username: currentUsername, userId: currentUser.uid, userPfp: currentPfp,
+                        email: currentUser.email, isAdminMsg: isAdmin, style: isAdmin ? adminSettings : null,
+                        timestamp: serverTimestamp(), media: data.secure_url, mediaType: data.resource_type === 'video' ? 'video' : 'image'
                     });
                 }
             } catch(err) { alert(err.message); } finally {
-                setTimeout(() => { progressContainer.style.display = 'none'; progressBar.style.width = '0%'; }, 500);
+                setTimeout(() => { document.getElementById('uploadProgressContainer').style.display = 'none'; }, 500);
                 fileInput.value = ""; 
             }
         });
     }
 
     async function renderMessage(id, msg) {
-      const isOwn = currentUser && msg.userId === currentUser.uid;
+      if (!currentUser) return;
+      const isOwn = msg.userId === currentUser.uid;
       const div = document.createElement("div");
       div.id = `msg-${id}`;
       div.className = `message ${isOwn ? 'own' : 'other'}`;
@@ -329,7 +361,6 @@
         } else { div.style.background = msg.style.bubbleColor; }
       }
 
-      // --- HEADER (PFP + Username + Time) ---
       const header = document.createElement("div");
       header.className = "message-header";
       header.onclick = () => showProfile(msg.userId);
@@ -355,7 +386,7 @@
       if (isAdmin && !isOwn) {
         const tooltip = document.createElement("div");
         tooltip.className = "admin-tooltip";
-        tooltip.innerHTML = `<b>${msg.email || ''}</b><br><button onclick="adminMute('${msg.userId}')">MUTE</button> <button onclick="adminBan('${msg.userId}')">BAN</button>`;
+        tooltip.innerHTML = `<b>${msg.email || ''}</b><br><button onclick="event.stopPropagation(); adminMute('${msg.userId}')">MUTE</button> <button onclick="event.stopPropagation(); adminBan('${msg.userId}')">BAN</button>`;
         header.appendChild(tooltip);
       }
 
@@ -390,16 +421,13 @@
       readReceiptDiv.className = "read-receipt";
       div.appendChild(readReceiptDiv);
 
-      // --- TABBED OUT LOGIC ---
       if (!isOwn && currentUser) {
-          // Only mark as read if tab is visible
           const markAsRead = () => {
               if (document.visibilityState === 'visible') {
                   update(ref(database, `messages/${id}/readBy`), { [currentUser.uid]: currentUsername });
                   document.removeEventListener('visibilitychange', markAsRead);
               }
           };
-
           if (document.visibilityState === 'visible') markAsRead();
           else document.addEventListener('visibilitychange', markAsRead);
       }
@@ -407,16 +435,13 @@
       onValue(ref(database, `messages/${id}/readBy`), (snapshot) => {
           if (snapshot.exists()) {
               const names = Object.values(snapshot.val());
-              if (names.length > 0) {
-                  readReceiptDiv.textContent = names.length <= 3 ? `👁 ${names.join(', ')}` : `👁 ${names.length} read`;
-              }
-          }
+              if (names.length > 0) readReceiptDiv.textContent = names.length <= 3 ? `👁 ${names.join(', ')}` : `👁 ${names.length} read`;
+          } else readReceiptDiv.textContent = "";
       });
 
       document.getElementById("chatBox").appendChild(div);
     }
 
-    /* PROFILE CARD LOGIC */
     window.showProfile = async (uid) => {
         const snap = await get(ref(database, `users/${uid}`));
         if (snap.exists()) {
