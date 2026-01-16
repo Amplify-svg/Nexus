@@ -19,7 +19,6 @@
       font-style: italic; color: #888; height: 15px; z-index: 5;
     }
 
-    /* Progress Bar */
     #uploadProgressContainer {
         position: fixed; top: 65px; left: 0; width: 100%; height: 4px;
         background: rgba(0,0,0,0.1); z-index: 1000; display: none;
@@ -32,10 +31,17 @@
     .message {
       padding: 10px 15px; border-radius: 18px; max-width: 75%;
       word-wrap: break-word; animation: messageFade 0.3s ease; position: relative;
+      display: flex; flex-direction: column;
     }
     .message.own { background: #4285f4; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
     .message.other { background: #e0e0e0; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; }
     body.dark-mode .message.other { background: #333; color: white; }
+
+    /* Header with PFP */
+    .message-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer; }
+    .msg-pfp { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: #ccc; }
+    .message-user { font-size: 11px; font-weight: bold; }
+    .message-time { font-size: 9px; opacity: 0.6; margin-left: 5px; }
 
     /* Read Receipts */
     .read-receipt {
@@ -44,7 +50,6 @@
         text-align: right;
         margin-top: 4px;
         min-height: 14px;
-        cursor: help;
     }
     .message.other .read-receipt { color: rgba(0,0,0,0.5); }
     body.dark-mode .message.other .read-receipt { color: rgba(255,255,255,0.5); }
@@ -56,21 +61,15 @@
         border: 1px solid rgba(0,0,0,0.1);
     }
     
-    /* MODALS GENERAL */
+    /* Modals */
     #mediaModal, #profileCardModal {
         display: none; position: fixed; inset: 0; 
         background: rgba(0,0,0,0.9); z-index: 9999; 
         align-items: center; justify-content: center;
     }
-    #mediaModal img, #mediaModal video {
-        max-width: 95%; max-height: 95%; border-radius: 8px;
-    }
-    .close-btn {
-        position: absolute; top: 20px; right: 30px; 
-        color: white; font-size: 40px; cursor: pointer; z-index: 10000;
-    }
+    #mediaModal img, #mediaModal video { max-width: 95%; max-height: 95%; border-radius: 8px; }
+    .close-btn { position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; cursor: pointer; z-index: 10000; }
 
-    /* PROFILE CARD STYLES */
     .profile-card {
       background: white; width: 320px; border-radius: 20px;
       overflow: hidden; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
@@ -79,18 +78,13 @@
     }
     body.dark-mode .profile-card { background: #222; color: white; }
     .card-header { height: 80px; background: #4285f4; }
-    .card-pfp {
-      width: 100px; height: 100px; border-radius: 50%; 
-      border: 5px solid white; margin-top: -50px;
-      background: #eee; object-fit: cover;
-    }
+    .card-pfp { width: 100px; height: 100px; border-radius: 50%; border: 5px solid white; margin-top: -50px; background: #eee; object-fit: cover; }
     body.dark-mode .card-pfp { border-color: #222; }
     .card-content { padding: 20px; }
     .card-name { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
     .card-bio { font-size: 14px; color: #666; font-style: italic; margin-top: 10px; }
     body.dark-mode .card-bio { color: #bbb; }
 
-    /* Admin Specials & Tooltip */
     .message.admin-gradient {
       background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
       background-size: 300% 300%;
@@ -99,23 +93,18 @@
     }
     .message.admin-gradient.animate { animation: gradientShift 6s ease infinite; }
 
-    .message-user { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; position: relative; cursor: pointer; }
-    .message-user:hover { text-decoration: underline; }
-    .admin-viewable { text-decoration: underline dotted #4285f4; cursor: help; }
-
     .admin-tooltip {
       visibility: hidden; width: 180px; background-color: #222; color: #fff;
       text-align: center; border-radius: 6px; padding: 10px;
       position: absolute; z-index: 100; bottom: 125%; left: 0;
       opacity: 0; transition: opacity 0.2s; border: 1px solid #444; font-weight: normal; font-size: 11px;
     }
-    .message-user:hover .admin-tooltip { visibility: visible; opacity: 1; }
+    .message-header:hover .admin-tooltip { visibility: visible; opacity: 1; }
 
     @keyframes messageFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     @keyframes modalPop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
 
-    /* Input Bar */
     #messageInputBox {
       position: fixed; left: 0; right: 0; bottom: 0; height: 80px;
       padding: 15px 20px; background: rgba(255,255,255,0.95);
@@ -126,7 +115,6 @@
     #messageInput { flex: 1; padding: 12px 20px; border-radius: 30px; border: 1px solid #ddd; outline: none; }
     body.dark-mode #messageInput { background: #111; color: white; border-color: #444; }
 
-    /* Drawers and Modals */
     #memberList {
       position: fixed; right: -320px; top: 0; width: 300px; height: 100vh;
       background: white; border-left: 1px solid #ddd; transition: 0.3s; z-index: 4000; padding: 20px;
@@ -148,14 +136,11 @@
   <canvas id="particleCanvas"></canvas>
   <script src="global.js"></script>
 
-  <div id="uploadProgressContainer">
-      <div id="uploadProgressBar"></div>
-  </div>
+  <div id="uploadProgressContainer"><div id="uploadProgressBar"></div></div>
 
   <div id="mediaModal">
       <div class="close-btn" onclick="closeMediaModal()">&times;</div>
-      <img id="modalImg" alt="Expanded" style="display:none;">
-      <video id="modalVideo" controls style="display:none;"></video>
+      <img id="modalImg" style="display:none;"><video id="modalVideo" controls style="display:none;"></video>
   </div>
 
   <div id="profileCardModal" onclick="closeProfileCard()">
@@ -163,9 +148,9 @@
           <div class="card-header"></div>
           <img id="cardPfp" src="" class="card-pfp">
           <div class="card-content">
-              <div id="cardName" class="card-name">Username</div>
+              <div id="cardName" class="card-name"></div>
               <div id="cardEmail" style="font-size: 12px; color: #888;"></div>
-              <p id="cardBio" class="card-bio">"No bio yet."</p>
+              <p id="cardBio" class="card-bio"></p>
           </div>
       </div>
   </div>
@@ -177,7 +162,7 @@
   </div>
 
   <div id="adminModal" class="admin-modal">
-    <h3 style="margin-bottom:15px;">Admin Style</h3>
+    <h3>Admin Style</h3>
     <input type="color" id="bubbleColorInput" style="width:100%; height:40px; margin-bottom:10px;">
     <input type="color" id="nameColorInput" style="width:100%; height:40px; margin-bottom:10px;">
     <label><input type="checkbox" id="gradientToggle"> Gradient</label><br>
@@ -186,7 +171,7 @@
   </div>
 
   <div id="banManagerModal" class="admin-modal">
-    <h3 style="margin-bottom:15px;">Manage Bans/Mutes</h3>
+    <h3>Manage Bans/Mutes</h3>
     <div id="banListContent"></div>
     <button onclick="closeBanManager()" style="width:100%; margin-top:20px; padding:10px; background:#444; border:none; color:white; border-radius:5px; cursor:pointer;">CLOSE</button>
   </div>
@@ -206,7 +191,6 @@
   <div id="messageInputBox">
     <label for="fileInput" style="cursor:pointer; font-size:24px; padding: 0 10px; color: #4285f4;">📷</label>
     <input type="file" id="fileInput" accept="image/*,video/*" style="display:none;">
-    
     <input id="messageInput" type="text" placeholder="Type a message..." autocomplete="off">
     <button id="sendBtn" onclick="sendMessage()" style="padding:12px 25px; background:#4285f4; color:white; border:none; border-radius:30px; cursor:pointer; font-weight:bold;">Send</button>
   </div>
@@ -233,7 +217,7 @@
     const auth = getAuth(app);
     const database = getDatabase(app);
 
-    let currentUser = null, currentUsername = "User", isAdmin = false, isBanned = false;
+    let currentUser = null, currentUsername = "User", currentPfp = "", isAdmin = false, isBanned = false;
     let adminSettings = { gradient: true, animate: true, bubbleColor: "#667eea", nameColor: "#ffffff" };
 
     onAuthStateChanged(auth, async (user) => {
@@ -243,6 +227,7 @@
       onValue(ref(database, `users/${user.uid}`), (snap) => {
         const data = snap.val() || {};
         currentUsername = data.username || user.email.split('@')[0];
+        currentPfp = data.pfp || "";
         isAdmin = data.isAdmin === true;
         isBanned = data.isBanned === true;
 
@@ -285,9 +270,7 @@
         const el = document.getElementById(`msg-${s.key}`);
         if (el) el.remove();
       });
-      onValue(ref(database, 'online'), (snap) => {
-          updateMemberList(snap.val() || {});
-      });
+      onValue(ref(database, 'online'), (snap) => updateMemberList(snap.val() || {}));
     }
 
     function setupFileUpload() {
@@ -300,7 +283,6 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            // Show Progress Bar
             progressContainer.style.display = 'block';
             progressBar.style.width = '10%'; 
 
@@ -309,21 +291,16 @@
             formData.append("upload_preset", "z1d4s4al"); 
 
             try {
-                // Cloudinary fetch
-                const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { 
-                    method: "POST", 
-                    body: formData 
-                });
-                
+                const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { method: "POST", body: formData });
                 progressBar.style.width = '100%';
-
-                if (!res.ok) throw new Error("Cloudinary upload failed");
+                if (!res.ok) throw new Error("Upload failed");
                 const data = await res.json();
                 
                 if(data.secure_url) {
                     push(ref(database, 'messages'), {
                         username: currentUsername,
                         userId: currentUser.uid,
+                        userPfp: currentPfp,
                         email: currentUser.email,
                         isAdminMsg: isAdmin,
                         style: isAdmin ? adminSettings : null,
@@ -332,13 +309,8 @@
                         mediaType: data.resource_type === 'video' ? 'video' : 'image'
                     });
                 }
-            } catch(err) {
-                alert("Upload failed: " + err.message);
-            } finally {
-                setTimeout(() => {
-                    progressContainer.style.display = 'none';
-                    progressBar.style.width = '0%';
-                }, 500);
+            } catch(err) { alert(err.message); } finally {
+                setTimeout(() => { progressContainer.style.display = 'none'; progressBar.style.width = '0%'; }, 500);
                 fileInput.value = ""; 
             }
         });
@@ -357,25 +329,34 @@
         } else { div.style.background = msg.style.bubbleColor; }
       }
 
-      const userSpan = document.createElement("span");
-      userSpan.className = "message-user" + (isAdmin ? " admin-viewable" : "");
-      userSpan.textContent = isOwn ? "You" : msg.username;
-      userSpan.onclick = () => showProfile(msg.userId); 
+      // --- HEADER (PFP + Username + Time) ---
+      const header = document.createElement("div");
+      header.className = "message-header";
+      header.onclick = () => showProfile(msg.userId);
+
+      const pfp = document.createElement("img");
+      pfp.className = "msg-pfp";
+      pfp.src = msg.userPfp || "https://ui-avatars.com/api/?background=random&name=" + msg.username;
       
-      if (msg.isAdminMsg && msg.style?.nameColor) userSpan.style.color = msg.style.nameColor;
+      const name = document.createElement("span");
+      name.className = "message-user";
+      name.textContent = isOwn ? "You" : msg.username;
+      if (msg.isAdminMsg && msg.style?.nameColor) name.style.color = msg.style.nameColor;
+
+      const time = document.createElement("span");
+      time.className = "message-time";
+      if (msg.timestamp) {
+          const date = new Date(msg.timestamp);
+          time.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+
+      header.append(pfp, name, time);
 
       if (isAdmin && !isOwn) {
         const tooltip = document.createElement("div");
         tooltip.className = "admin-tooltip";
-        tooltip.onclick = (e) => e.stopPropagation();
-        tooltip.innerHTML = `
-          <b style="color:#4285f4">${msg.email || 'No email'}</b><br>
-          <div style="display:flex; gap:5px; justify-content:center; margin-top:8px;">
-            <button style="background:#ff8800; border:none; color:white; padding:5px; border-radius:4px; font-size:9px; cursor:pointer;" onclick="adminMute('${msg.userId}')">MUTE</button>
-            <button style="background:#ea4335; border:none; color:white; padding:5px; border-radius:4px; font-size:9px; cursor:pointer;" onclick="adminBan('${msg.userId}')">BAN</button>
-          </div>
-        `;
-        userSpan.appendChild(tooltip);
+        tooltip.innerHTML = `<b>${msg.email || ''}</b><br><button onclick="adminMute('${msg.userId}')">MUTE</button> <button onclick="adminBan('${msg.userId}')">BAN</button>`;
+        header.appendChild(tooltip);
       }
 
       const contentDiv = document.createElement("div");
@@ -390,11 +371,7 @@
           const mediaEl = document.createElement(isVideo ? 'video' : 'img');
           mediaEl.src = msg.media;
           mediaEl.className = 'chat-media';
-          if(isVideo) {
-              mediaEl.muted = true;
-              mediaEl.loop = true;
-              mediaEl.setAttribute('playsinline', '');
-          }
+          if(isVideo) { mediaEl.muted = true; mediaEl.loop = true; mediaEl.setAttribute('playsinline', ''); }
           mediaEl.onclick = (e) => { e.stopPropagation(); openMediaModal(msg.media, msg.mediaType); };
           contentDiv.appendChild(mediaEl);
       }
@@ -407,33 +384,31 @@
         contentDiv.appendChild(del);
       }
       
-      div.append(userSpan, contentDiv);
+      div.append(header, contentDiv);
       
-      // === READ RECEIPT LOGIC ===
       const readReceiptDiv = document.createElement("div");
       readReceiptDiv.className = "read-receipt";
       div.appendChild(readReceiptDiv);
 
-      // 1. Mark as Read (If not my own message)
+      // --- TABBED OUT LOGIC ---
       if (!isOwn && currentUser) {
-          update(ref(database, `messages/${id}/readBy`), {
-              [currentUser.uid]: currentUsername
-          });
+          // Only mark as read if tab is visible
+          const markAsRead = () => {
+              if (document.visibilityState === 'visible') {
+                  update(ref(database, `messages/${id}/readBy`), { [currentUser.uid]: currentUsername });
+                  document.removeEventListener('visibilitychange', markAsRead);
+              }
+          };
+
+          if (document.visibilityState === 'visible') markAsRead();
+          else document.addEventListener('visibilitychange', markAsRead);
       }
 
-      // 2. Display Read Status
       onValue(ref(database, `messages/${id}/readBy`), (snapshot) => {
           if (snapshot.exists()) {
-              const readers = snapshot.val();
-              const readerNames = Object.values(readers);
-              
-              if (readerNames.length > 0) {
-                  // If less than 4 people, show names. Else show count.
-                  if (readerNames.length <= 3) {
-                       readReceiptDiv.textContent = `👁 ${readerNames.join(', ')}`;
-                  } else {
-                       readReceiptDiv.textContent = `👁 ${readerNames.length} read`;
-                  }
+              const names = Object.values(snapshot.val());
+              if (names.length > 0) {
+                  readReceiptDiv.textContent = names.length <= 3 ? `👁 ${names.join(', ')}` : `👁 ${names.length} read`;
               }
           }
       });
@@ -502,8 +477,7 @@
         if (u.isBanned || u.kicked) {
           const div = document.createElement('div');
           div.style = "display:flex; justify-content:space-between; margin-bottom:10px;";
-          div.innerHTML = `<span>${u.username} (${u.kicked ? 'BANNED' : 'MUTED'})</span>
-                           <button onclick="unbanUser('${childSnap.key}')">RESTORE</button>`;
+          div.innerHTML = `<span>${u.username} (${u.kicked ? 'BANNED' : 'MUTED'})</span><button onclick="unbanUser('${childSnap.key}')">RESTORE</button>`;
           list.appendChild(div);
         }
       });
@@ -514,17 +488,14 @@
       const s = await get(child(ref(database), `users/${uid}`));
       update(ref(database, `users/${uid}`), { isBanned: !s.val()?.isBanned });
     };
-    window.adminBan = (uid) => {
-      if(confirm("Kick and permanently ban this user?")) update(ref(database, `users/${uid}`), { kicked: true });
-    };
-
-    window.clearChat = () => { if(confirm("Clear all messages?")) remove(ref(database, 'messages')); };
+    window.adminBan = (uid) => { if(confirm("Ban user?")) update(ref(database, `users/${uid}`), { kicked: true }); };
+    window.clearChat = () => { if(confirm("Clear chat?")) remove(ref(database, 'messages')); };
     
     window.sendMessage = () => {
       const input = document.getElementById("messageInput");
       if(!input.value.trim() || isBanned) return;
       push(ref(database, 'messages'), {
-        text: input.value, username: currentUsername, userId: currentUser.uid,
+        text: input.value, username: currentUsername, userId: currentUser.uid, userPfp: currentPfp,
         email: currentUser.email, isAdminMsg: isAdmin, style: isAdmin ? adminSettings : null, timestamp: serverTimestamp()
       });
       input.value = "";
@@ -536,12 +507,7 @@
         const img = document.getElementById('modalImg');
         const video = document.getElementById('modalVideo');
         modal.style.display = 'flex';
-        if (type === 'video') { 
-            img.style.display = 'none'; 
-            video.style.display = 'block'; 
-            video.src = src; 
-            video.play();
-        }
+        if (type === 'video') { img.style.display = 'none'; video.style.display = 'block'; video.src = src; video.play(); }
         else { video.style.display = 'none'; img.style.display = 'block'; img.src = src; }
     };
 
