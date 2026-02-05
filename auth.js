@@ -37,10 +37,10 @@ window.login = () => {
 
 window.logout = () => {
     signOut(auth).then(() => { 
-        if(location.pathname.includes('Home.html')) {
+        if(location.pathname.includes('Serendipity.html') || location.pathname === '/') {
             location.reload();
         } else {
-            location.href = 'Home.html'; 
+            location.href = '/'; 
         }
     });
 };

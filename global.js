@@ -17,12 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">NEXUS</div>
             <div class="nav-items">
-                <a href="Serendipity.html" class="nav-item">🏠 Home</a>
-                <a href="chat.html" class="nav-item">💬 Chat</a>
-                <a href="call.html" class="nav-item">📞 Video Call</a>
-                <a href="research.html" class="nav-item">🌐 Research Portal</a>
-                <a href="games.html" class="nav-item">🎮 Games</a>
-                <a href="settings.html" class="nav-item">⚙️ Settings</a>
+                <a href="/" class="nav-item">🏠 Home</a>
+                <a href="/chat.html" class="nav-item">💬 Chat</a>
+                <a href="/call.html" class="nav-item">📞 Video Call</a>
+                <a href="/research.html" class="nav-item">🌐 Research Portal</a>
+                <a href="/games.html" class="nav-item">🎮 Games</a>
+                <a href="/settings.html" class="nav-item">⚙️ Settings</a>
             </div>
             <div class="sidebar-footer">
                 <button class="footer-btn logout-btn" id="logoutBtn" style="background:#ea4335; color:white; display:none;">🚪 Logout</button>
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.logout();
         } else {
             // Fallback if auth.js isn't loaded/ready
-            window.location.replace("Serendipity.html");
+            window.location.replace("/");
         }
     };
 });
